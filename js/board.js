@@ -89,16 +89,10 @@ function onMouseoutSquare() {
 }
 
 function onSnapEnd() {
-  // Sync board visual with chess.js state
-  // (handles edge cases like en passant, castling)
-  const { getChess } = require_game();
-  const chess = getChess();
-  if (chess) board?.position(chess.fen(), false);
-}
-
-// Lazy import to avoid circular dependency
-function require_game() {
-  return window.__labchess_game || {};
+  // Sync board visual with chess.js state via global
+  if (window._labchess_fen) {
+    board?.position(window._labchess_fen, false);
+  }
 }
 
 // ─────────────────────────────────────────────

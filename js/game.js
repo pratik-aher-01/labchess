@@ -31,6 +31,7 @@ const state = {
 
 export function initGame(roomCode, myColor, initialFen) {
   state.chess       = new Chess(initialFen || undefined);
+  window._labchess_fen = state.chess.fen();
   state.roomCode    = roomCode;
   state.myColor     = myColor;
   state.moveHistory = [];
@@ -109,6 +110,7 @@ export function tryMove(from, to, promotionPiece = "q") {
   });
 
   if (!move) return false; // illegal move
+  window._labchess_fen = state.chess.fen();
 
   // Move accepted — update state
   state.isMyTurn = false;
