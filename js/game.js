@@ -7,7 +7,7 @@
 // ─────────────────────────────────────────────
 
 import { pushMove, setGameResult, listenToGame } from "./firebase.js";
-import { renderPosition, highlightLastMove, clearHighlights, showLegalMoves, clearLegalMoves, flipBoard, showOverlay } from "./board.js";
+import { renderPosition, highlightLastMove, clearHighlights, highlightCheck, showLegalMoves, clearLegalMoves, flipBoard, showOverlay } from "./board.js";
 import { updateStatusBar, updateMoveHistory, updatePlayerBars, showToast } from "./ui.js";
 
 // ─────────────────────────────────────────────
@@ -64,40 +64,40 @@ function onRemoteUpdate(gameData) {
 
   const remoteFen   = gameData.fen;
   const currentFen  = state.chess.fen();
-  const remoteColor = gameData.turn === "w" ? "white" : "black"; // whose turn it is NOW (after the move)
+  const remoteColor = gameData.turn === "w" ? "white" : "black";
 
-  // Only process if FEN actually changed and it's now MY turn
-  // (meaning the opponent just moved and it's my turn)
   if (remoteFen !== currentFen && remoteColor === state.myColor) {
-  // 1. Clear old highlights FIRST
-  clearHighlights();
+    clearHighlights();
+    state.chess.load(remoteFen);
+    state.moveHistory = gameData.moves || [];
+    state.isMyTurn    = true;
+    window._labchess_fen = state.chess.fen();
 
-  // 2. Load new position
-  state.chess.load(remoteFen);
-  state.moveHistory = gameData.moves || [];
-  state.isMyTurn = true;
+    renderPosition(remoteFen);
 
-  // 3. Render new position on board
-  renderPosition(remoteFen);
+    if (gameData.lastMove) {
+      highlightLastMove(gameData.lastMove.from, gameData.lastMove.to);
+    }
 
-  // 4. THEN apply new highlight
-  if (gameData.lastMove) {
-    highlightLastMove(gameData.lastMove.from, gameData.lastMove.to);
+    updateCheckHighlight(); // ← check highlight added here
+
+    updateMoveHistory(state.moveHistory);
+    updateStatusBar(state.chess, state.isMyTurn, state.myColor);
+    updatePlayerBars(state.myColor, state.chess);
+
+    checkGameOver(gameData);
   }
 
-  // 5. Update UI
-  updateMoveHistory(state.moveHistory);
-  updateStatusBar(state.chess, state.isMyTurn, state.myColor);
-  updatePlayerBars(state.myColor, state.chess);
-
-  checkGameOver(gameData);
+  if (gameData.status === "done" && !state.gameOver) {
+    handleGameOver(gameData.winner);
+  }
 }
 
   // Handle game over set by opponent (e.g. resign)
   if (gameData.status === "done" && !state.gameOver) {
     handleGameOver(gameData.winner);
   }
-}
+
 
 // ─────────────────────────────────────────────
 //  TRY MOVE
@@ -108,29 +108,21 @@ function onRemoteUpdate(gameData) {
 export function tryMove(from, to, promotionPiece = "q") {
   if (!state.isMyTurn || state.gameOver) return false;
 
-  const move = state.chess.move({
-    from,
-    to,
-    promotion: promotionPiece,
-  });
+  const move = state.chess.move({ from, to, promotion: promotionPiece });
+  if (!move) return false;
 
-  if (!move) return false; // illegal move
-  window._labchess_fen = state.chess.fen();
-
-  // Move accepted — update state
   state.isMyTurn = false;
   state.moveHistory.push(move.san);
+  window._labchess_fen = state.chess.fen();
 
-  // Highlight the move
   highlightLastMove(from, to);
+  updateCheckHighlight(); // ← check highlight added here
 
-  // Update UI immediately (optimistic)
   updateMoveHistory(state.moveHistory);
   updateStatusBar(state.chess, state.isMyTurn, state.myColor);
   updatePlayerBars(state.myColor, state.chess);
 
-  // Push to Firebase
-  const turn = state.chess.turn(); // "w" or "b" — whose turn it is now
+  const turn = state.chess.turn();
   pushMove(state.roomCode, {
     fen:   state.chess.fen(),
     turn,
@@ -143,10 +135,8 @@ export function tryMove(from, to, promotionPiece = "q") {
     showToast("Connection error. Move may not have synced.", "error");
   });
 
-  // Check if this move ended the game
   const isOver = checkGameOver(null);
   if (isOver) {
-    // Determine winner
     let winner = null;
     if (state.chess.in_checkmate()) {
       winner = state.myColor === "white" ? "w" : "b";
@@ -183,6 +173,33 @@ export function isMyPiece(square) {
   return piece.color === myColorChar;
 }
 
+// ─────────────────────────────────────────────
+//  HIGHLIGHT CHECK
+//  Colors king square red when in check.
+// ─────────────────────────────────────────────
+function updateCheckHighlight() {
+  // Clear any previous check highlight
+  document.querySelectorAll(".highlight-check")
+    .forEach(el => el.classList.remove("highlight-check"));
+
+  if (!state.chess || !state.chess.in_check()) return;
+
+  // Find the king square of the side in check
+  const board = state.chess.board();
+  const turnColor = state.chess.turn(); // "w" or "b"
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const sq = board[r][c];
+      if (sq && sq.type === "k" && sq.color === turnColor) {
+        const file = "abcdefgh"[c];
+        const rank = 8 - r;
+        highlightCheck(`${file}${rank}`);
+        return;
+      }
+    }
+  }
+}
 // ─────────────────────────────────────────────
 //  CHECK GAME OVER
 //  Returns true if game has ended.
