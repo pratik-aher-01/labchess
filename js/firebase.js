@@ -16,14 +16,26 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 // ── DB reference (set by index.html firebase-ready event) ──
+
 let db = null;
 
-window.addEventListener("firebase-ready", () => {
-  db = window._firebaseDB;
-  console.log("[Firebase] Ready");
-});
+// Handle case where firebase-ready already fired before this module loaded
+function initDB() {
+  if (window._firebaseDB) {
+    db = window._firebaseDB;
+    console.log("[Firebase] Ready");
+  } else {
+    window.addEventListener("firebase-ready", () => {
+      db = window._firebaseDB;
+      console.log("[Firebase] Ready");
+    });
+  }
+}
+
+initDB();
 
 function getDB() {
+  if (!db && window._firebaseDB) db = window._firebaseDB;
   if (!db) throw new Error("Firebase DB not initialized yet.");
   return db;
 }
