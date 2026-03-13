@@ -27,7 +27,7 @@ export function initBoard(fen = "start") {
     draggable:    true,
     dropOffBoard: "snapback",
     sparePieces:  false,
-    pieceTheme:   "https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/img/chesspieces/wikipedia/{piece}.png",
+    pieceTheme:   "https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png",
 
     onDragStart,
     onDrop,

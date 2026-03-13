@@ -202,11 +202,11 @@ export function updateStatusBar(chess, isMyTurn, myColor, opts = {}) {
   const myTurn       = currentTurn === myColorChar;
 
   if (turnText) {
-    if (chess.isCheckmate()) {
+    if (chess.in_checkmate()) {
       turnText.textContent = "Checkmate!";
-    } else if (chess.isDraw()) {
+    } else if (chess.in_draw()) {
       turnText.textContent = "Draw";
-    } else if (chess.inCheck()) {
+    } else if (chess.in_check()) {
       turnText.textContent = myTurn ? "You are in Check!" : "Opponent in Check";
     } else {
       turnText.textContent = myTurn ? "Your turn" : "Opponent's turn";

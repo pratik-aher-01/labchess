@@ -141,7 +141,7 @@ export function tryMove(from, to, promotionPiece = "q") {
   if (isOver) {
     // Determine winner
     let winner = null;
-    if (state.chess.isCheckmate()) {
+    if (state.chess.in_checkmate()) {
       winner = state.myColor === "white" ? "w" : "b";
     } else {
       winner = "draw";
@@ -192,16 +192,16 @@ function checkGameOver(gameData) {
   }
 
   // Check local chess.js state
-  if (state.chess.isGameOver()) {
+  if (state.chess.game_over()) {
     state.gameOver = true;
 
-    if (state.chess.isCheckmate()) {
+    if (state.chess.in_checkmate()) {
       // The side that just moved won
       const winner = state.chess.turn() === "w" ? "b" : "w"; // turn flips after move
       handleGameOver(winner);
-    } else if (state.chess.isDraw()) {
+    } else if (state.chess.in_draw()) {
       handleGameOver("draw");
-    } else if (state.chess.isStalemate()) {
+    } else if (state.chess.in_stalemate()) {
       handleGameOver("draw");
     }
     return true;
@@ -236,11 +236,11 @@ function handleGameOver(winner) {
   } else if (winner === myColorChar) {
     emoji = "👑";
     title = "You Win!";
-    sub   = state.chess?.isCheckmate() ? "Checkmate!" : "Opponent resigned";
+    sub   = state.chess?.in_checkmate() ? "Checkmate!" : "Opponent resigned";
   } else {
     emoji = "💀";
     title = "You Lose";
-    sub   = state.chess?.isCheckmate() ? "Checkmate" : "Opponent won";
+    sub   = state.chess?.in_checkmate() ? "Checkmate" : "Opponent won";
   }
 
   showOverlay(emoji, title, sub);
