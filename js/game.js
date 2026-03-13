@@ -69,24 +69,29 @@ function onRemoteUpdate(gameData) {
   // Only process if FEN actually changed and it's now MY turn
   // (meaning the opponent just moved and it's my turn)
   if (remoteFen !== currentFen && remoteColor === state.myColor) {
-    // Load the new position
-    state.chess.load(remoteFen);
-    state.moveHistory = gameData.moves || [];
-    state.isMyTurn    = true;
+  // 1. Clear old highlights FIRST
+  clearHighlights();
 
-    // Highlight opponent's last move
-    if (gameData.lastMove) {
-      highlightLastMove(gameData.lastMove.from, gameData.lastMove.to);
-    }
+  // 2. Load new position
+  state.chess.load(remoteFen);
+  state.moveHistory = gameData.moves || [];
+  state.isMyTurn = true;
 
-    // Update UI
-    updateMoveHistory(state.moveHistory);
-    updateStatusBar(state.chess, state.isMyTurn, state.myColor);
-    updatePlayerBars(state.myColor, state.chess);
+  // 3. Render new position on board
+  renderPosition(remoteFen);
 
-    // Check for game-ending conditions
-    checkGameOver(gameData);
+  // 4. THEN apply new highlight
+  if (gameData.lastMove) {
+    highlightLastMove(gameData.lastMove.from, gameData.lastMove.to);
   }
+
+  // 5. Update UI
+  updateMoveHistory(state.moveHistory);
+  updateStatusBar(state.chess, state.isMyTurn, state.myColor);
+  updatePlayerBars(state.myColor, state.chess);
+
+  checkGameOver(gameData);
+}
 
   // Handle game over set by opponent (e.g. resign)
   if (gameData.status === "done" && !state.gameOver) {
