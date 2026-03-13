@@ -1,0 +1,379 @@
+/* ─────────────────────────────────────────────
+   LabChess — Responsive Styles
+   Adjustments for tablets, small laptops,
+   and lab monitors of various resolutions.
+───────────────────────────────────────────── */
+
+/* ── Large Desktop (1400px+) ── */
+@media (min-width: 1400px) {
+  :root {
+    --board-size: 580px;
+  }
+
+  .logo-title {
+    font-size: 3.6rem;
+  }
+
+  .lobby-card,
+  .waiting-card {
+    max-width: 460px;
+    padding: 44px 48px;
+  }
+
+  .overlay-message {
+    font-size: 2.4rem;
+  }
+}
+
+/* ── Standard Desktop / Lab Monitor (1024px–1399px) ── */
+@media (max-width: 1399px) and (min-width: 1024px) {
+  :root {
+    --board-size: 520px;
+  }
+}
+
+/* ── Small Laptop / Large Tablet (768px–1023px) ── */
+@media (max-width: 1023px) {
+  :root {
+    --board-size: 440px;
+  }
+
+  .logo-title {
+    font-size: 2.4rem;
+  }
+
+  .logo-icon {
+    font-size: 2.8rem;
+  }
+
+  .lobby-card,
+  .waiting-card {
+    padding: 28px 28px;
+  }
+
+  .room-code-display {
+    font-size: 2.2rem;
+    letter-spacing: 0.25em;
+    min-width: 220px;
+    padding: 14px 20px;
+  }
+
+  .game-header {
+    padding: 12px 16px;
+  }
+
+  .game-main {
+    padding: 12px 16px 0;
+  }
+
+  .overlay-message {
+    font-size: 1.6rem;
+    padding: 20px 28px;
+  }
+}
+
+/* ── Tablet Portrait (600px–767px) ── */
+@media (max-width: 767px) {
+  :root {
+    --board-size: 360px;
+  }
+
+  body {
+    overflow-y: auto;
+  }
+
+  /* Lobby */
+  .lobby-content,
+  .waiting-content {
+    padding: 28px 16px;
+    gap: 24px;
+  }
+
+  .logo-title {
+    font-size: 2rem;
+  }
+
+  .logo-icon {
+    font-size: 2.4rem;
+  }
+
+  .logo-sub {
+    font-size: 0.85rem;
+  }
+
+  .lobby-card,
+  .waiting-card {
+    padding: 24px 20px;
+    border-radius: 14px;
+  }
+
+  .color-btn {
+    padding: 10px 8px;
+    font-size: 0.85rem;
+  }
+
+  .color-btn .piece-icon {
+    font-size: 1.1rem;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    padding: 12px;
+    font-size: 0.95rem;
+  }
+
+  .code-input {
+    font-size: 1.1rem;
+    padding: 12px 14px;
+  }
+
+  .room-code-display {
+    font-size: 1.8rem;
+    letter-spacing: 0.2em;
+    min-width: 190px;
+    padding: 12px 16px;
+  }
+
+  /* Game screen */
+  .game-header {
+    padding: 10px 14px;
+  }
+
+  .game-logo {
+    font-size: 1rem;
+  }
+
+  .room-pill {
+    font-size: 0.7rem;
+    padding: 4px 10px;
+  }
+
+  .btn-resign {
+    font-size: 0.75rem;
+    padding: 5px 12px;
+  }
+
+  .game-main {
+    padding: 10px 14px 0;
+    gap: 8px;
+  }
+
+  .player-bar {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .player-avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 1rem;
+  }
+
+  .player-name {
+    font-size: 0.82rem;
+  }
+
+  .player-color-tag {
+    font-size: 0.62rem;
+  }
+
+  .captured-pieces {
+    font-size: 0.75rem;
+    min-width: 60px;
+  }
+
+  .status-bar {
+    padding: 8px 12px;
+  }
+
+  .turn-indicator {
+    font-size: 0.8rem;
+  }
+
+  .move-count {
+    font-size: 0.68rem;
+  }
+
+  .move-list {
+    max-height: 72px;
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+  }
+
+  .move-list li {
+    font-size: 0.7rem;
+  }
+
+  .overlay-message {
+    font-size: 1.3rem;
+    padding: 16px 20px;
+  }
+
+  .overlay-message .result-emoji {
+    font-size: 2.2rem;
+  }
+
+  .toast {
+    font-size: 0.8rem;
+    padding: 10px 18px;
+    bottom: 16px;
+    white-space: normal;
+    max-width: calc(100vw - 32px);
+    text-align: center;
+  }
+}
+
+/* ── Small Mobile (below 480px) ── */
+@media (max-width: 479px) {
+  :root {
+    --board-size: calc(100vw - 28px);
+  }
+
+  .board-wrap {
+    width: var(--board-size);
+    height: var(--board-size);
+  }
+
+  #chessboard {
+    width: var(--board-size) !important;
+    height: var(--board-size) !important;
+  }
+
+  .logo-title {
+    font-size: 1.8rem;
+  }
+
+  .logo-icon {
+    font-size: 2rem;
+  }
+
+  .lobby-card,
+  .waiting-card {
+    padding: 20px 16px;
+  }
+
+  .section-label {
+    font-size: 0.65rem;
+  }
+
+  .color-pick {
+    gap: 8px;
+  }
+
+  .room-code-display {
+    font-size: 1.5rem;
+    letter-spacing: 0.15em;
+    min-width: unset;
+    width: 100%;
+  }
+
+  .game-main {
+    padding: 8px 10px 0;
+  }
+
+  .player-bar {
+    max-width: 100%;
+  }
+
+  .status-bar {
+    max-width: 100%;
+  }
+
+  .move-history {
+    max-width: 100%;
+  }
+
+  .promotion-modal {
+    gap: 6px;
+    padding: 12px;
+  }
+
+  .promotion-piece {
+    font-size: 2.2rem;
+    padding: 6px;
+  }
+}
+
+/* ── Very Short Screens (landscape mobile) ── */
+@media (max-height: 600px) and (orientation: landscape) {
+  :root {
+    --board-size: min(calc(100vh - 120px), 420px);
+  }
+
+  .lobby-content,
+  .waiting-content {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .logo-block {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+  }
+
+  .logo-icon {
+    animation: none;
+    font-size: 2rem;
+    margin-bottom: 0;
+  }
+
+  .logo-title {
+    font-size: 1.6rem;
+  }
+
+  .logo-sub {
+    display: none;
+  }
+
+  .lobby-card {
+    padding: 20px 24px;
+  }
+
+  .game-main {
+    flex-direction: row;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .player-bar {
+    max-width: 260px;
+  }
+
+  .status-bar,
+  .move-history {
+    max-width: 260px;
+  }
+}
+
+/* ── High DPI / Retina Screens ── */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  #chessboard {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+}
+
+/* ── Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .logo-icon,
+  .waiting-spinner span,
+  .highlight-check,
+  .turn-dot.my-turn {
+    animation: none !important;
+  }
+
+  .btn-primary:hover,
+  .btn-secondary:hover,
+  .color-btn:hover {
+    transform: none !important;
+  }
+
+  * {
+    transition-duration: 0.01ms !important;
+  }
+}

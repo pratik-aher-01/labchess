@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LabChess — Play Without Login</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Chess Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css" />
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    import config from "./config.js";
+    const app = initializeApp(config);
+    window._firebaseDB = getDatabase(app);
+    window.dispatchEvent(new Event("firebase-ready"));
+  </script>
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/board.css" />
+  <link rel="stylesheet" href="css/ui.css" />
+  <link rel="stylesheet" href="css/responsive.css" />
+</head>
+
+<body>
+
+  <!-- ─── LOBBY SCREEN ─── -->
+  <div id="lobby-screen" class="screen active">
+    <div class="lobby-bg"></div>
+
+    <div class="lobby-content">
+      <div class="logo-block">
+        <span class="logo-icon">♟</span>
+        <h1 class="logo-title">LabChess</h1>
+        <p class="logo-sub">No login. No account. Just chess.</p>
+      </div>
+
+      <div class="lobby-card">
+        <!-- Create Game -->
+        <div class="lobby-section">
+          <h2 class="section-label">Start a Game</h2>
+          <div class="color-pick">
+            <button class="color-btn active" data-color="white">
+              <span class="piece-icon">♔</span> White
+            </button>
+            <button class="color-btn" data-color="black">
+              <span class="piece-icon">♚</span> Black
+            </button>
+          </div>
+          <button id="btn-create" class="btn-primary">Create Game</button>
+        </div>
+
+        <div class="divider"><span>or</span></div>
+
+        <!-- Join Game -->
+        <div class="lobby-section">
+          <h2 class="section-label">Join a Game</h2>
+          <input
+            id="join-code-input"
+            class="code-input"
+            type="text"
+            maxlength="6"
+            placeholder="Enter 6-letter code"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button id="btn-join" class="btn-secondary">Join Game</button>
+        </div>
+      </div>
+
+      <p class="lobby-hint">Share the room code with your friend on another PC</p>
+    </div>
+  </div>
+
+  <!-- ─── WAITING SCREEN ─── -->
+  <div id="waiting-screen" class="screen">
+    <div class="lobby-bg"></div>
+    <div class="waiting-content">
+      <div class="logo-block">
+        <span class="logo-icon">♟</span>
+        <h1 class="logo-title">LabChess</h1>
+      </div>
+      <div class="waiting-card">
+        <p class="waiting-label">Share this code with your friend</p>
+        <div class="room-code-display" id="display-room-code">——————</div>
+        <button class="btn-copy" id="btn-copy-code">Copy Code</button>
+        <div class="waiting-spinner">
+          <span></span><span></span><span></span>
+        </div>
+        <p class="waiting-status">Waiting for opponent to join...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── GAME SCREEN ─── -->
+  <div id="game-screen" class="screen">
+
+    <header class="game-header">
+      <div class="game-logo">♟ LabChess</div>
+      <div class="room-pill">
+        Room: <span id="header-room-code">——</span>
+      </div>
+      <button id="btn-resign" class="btn-resign">Resign</button>
+    </header>
+
+    <main class="game-main">
+
+      <!-- Opponent info -->
+      <div class="player-bar" id="bar-opponent">
+        <div class="player-avatar" id="avatar-opponent">?</div>
+        <div class="player-info">
+          <span class="player-name">Opponent</span>
+          <span class="player-color-tag" id="tag-opponent">—</span>
+        </div>
+        <div class="captured-pieces" id="captured-opponent"></div>
+      </div>
+
+      <!-- Board -->
+      <div class="board-wrap">
+        <div id="chessboard"></div>
+        <div id="board-overlay" class="board-overlay hidden">
+          <div class="overlay-message" id="overlay-message"></div>
+        </div>
+      </div>
+
+      <!-- My info -->
+      <div class="player-bar" id="bar-me">
+        <div class="player-avatar" id="avatar-me">♟</div>
+        <div class="player-info">
+          <span class="player-name">You</span>
+          <span class="player-color-tag" id="tag-me">—</span>
+        </div>
+        <div class="captured-pieces" id="captured-me"></div>
+      </div>
+
+    </main>
+
+    <!-- Status bar -->
+    <div class="status-bar">
+      <div class="turn-indicator" id="turn-indicator">
+        <span class="turn-dot" id="turn-dot"></span>
+        <span id="turn-text">Loading...</span>
+      </div>
+      <div class="move-count">Move <span id="move-count">0</span></div>
+    </div>
+
+    <!-- Move history panel -->
+    <aside class="move-history">
+      <h3 class="history-title">Moves</h3>
+      <ol id="move-list" class="move-list"></ol>
+    </aside>
+
+  </div>
+
+  <!-- ─── TOAST ─── -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- App Scripts (loaded after Firebase module) -->
+  <script type="module" src="js/firebase.js"></script>
+  <script type="module" src="js/game.js"></script>
+  <script type="module" src="js/board.js"></script>
+  <script type="module" src="js/ui.js"></script>
+
+</body>
+</html>

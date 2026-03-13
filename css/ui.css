@@ -1,0 +1,653 @@
+/* ─────────────────────────────────────────────
+   LabChess — UI Styles
+   Lobby, waiting screen, game header, player
+   bars, status bar, move history, toast, buttons
+───────────────────────────────────────────── */
+
+/* ── Reset & Base ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #0d0d1a;
+  color: #f0ebe0;
+  min-height: 100vh;
+}
+
+/* ── Screen System ── */
+.screen {
+  display: none;
+  min-height: 100vh;
+  width: 100%;
+  position: relative;
+}
+
+.screen.active {
+  display: flex;
+}
+
+/* ════════════════════════════════════════════
+   LOBBY & WAITING SCREENS
+════════════════════════════════════════════ */
+
+/* ── Background ── */
+.lobby-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 20%, rgba(201,168,76,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 80% 80%, rgba(99,120,201,0.07) 0%, transparent 60%),
+    #0d0d1a;
+}
+
+/* subtle chess pattern overlay */
+.lobby-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-conic-gradient(rgba(255,255,255,0.015) 0% 25%, transparent 0% 50%);
+  background-size: 48px 48px;
+  opacity: 1;
+}
+
+/* ── Lobby Layout ── */
+.lobby-content,
+.waiting-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 40px 20px;
+  gap: 32px;
+}
+
+/* ── Logo Block ── */
+.logo-block {
+  text-align: center;
+}
+
+.logo-icon {
+  display: block;
+  font-size: 3.5rem;
+  line-height: 1;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 0 20px rgba(201,168,76,0.4));
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0);    }
+  50%       { transform: translateY(-6px); }
+}
+
+.logo-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 3rem;
+  font-weight: 900;
+  letter-spacing: -1px;
+  background: linear-gradient(135deg, #c9a84c 0%, #f0d9b5 50%, #c9a84c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.1;
+}
+
+.logo-sub {
+  font-size: 0.95rem;
+  color: rgba(240,235,224,0.45);
+  margin-top: 6px;
+  letter-spacing: 0.03em;
+}
+
+/* ── Lobby Card ── */
+.lobby-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(201,168,76,0.18);
+  border-radius: 18px;
+  padding: 36px 40px;
+  width: 100%;
+  max-width: 420px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+}
+
+.lobby-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.section-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(201,168,76,0.7);
+}
+
+/* ── Color Pick Buttons ── */
+.color-pick {
+  display: flex;
+  gap: 10px;
+}
+
+.color-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  color: rgba(240,235,224,0.6);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.color-btn .piece-icon {
+  font-size: 1.3rem;
+}
+
+.color-btn:hover {
+  border-color: rgba(201,168,76,0.4);
+  color: #f0ebe0;
+  background: rgba(201,168,76,0.08);
+}
+
+.color-btn.active {
+  border-color: #c9a84c;
+  background: rgba(201,168,76,0.15);
+  color: #f0d9b5;
+  box-shadow: 0 0 16px rgba(201,168,76,0.2);
+}
+
+/* ── Divider ── */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0;
+  color: rgba(240,235,224,0.2);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+}
+
+/* ── Input ── */
+.code-input {
+  width: 100%;
+  padding: 14px 18px;
+  background: rgba(255,255,255,0.06);
+  border: 1.5px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  color: #f0ebe0;
+  font-family: 'DM Mono', monospace;
+  font-size: 1.3rem;
+  font-weight: 500;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.code-input::placeholder {
+  color: rgba(240,235,224,0.2);
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+}
+
+.code-input:focus {
+  border-color: #c9a84c;
+  box-shadow: 0 0 0 3px rgba(201,168,76,0.15);
+}
+
+/* ── Buttons ── */
+.btn-primary,
+.btn-secondary {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.02em;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #c9a84c, #e8c96a);
+  color: #1a1408;
+  box-shadow: 0 4px 20px rgba(201,168,76,0.35);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(201,168,76,0.45);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: rgba(255,255,255,0.07);
+  color: #f0ebe0;
+  border: 1.5px solid rgba(255,255,255,0.12);
+}
+
+.btn-secondary:hover {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.22);
+  transform: translateY(-2px);
+}
+
+.lobby-hint {
+  font-size: 0.8rem;
+  color: rgba(240,235,224,0.25);
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+/* ════════════════════════════════════════════
+   WAITING SCREEN
+════════════════════════════════════════════ */
+
+.waiting-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(201,168,76,0.18);
+  border-radius: 18px;
+  padding: 40px;
+  width: 100%;
+  max-width: 420px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.waiting-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(201,168,76,0.7);
+}
+
+.room-code-display {
+  font-family: 'DM Mono', monospace;
+  font-size: 2.8rem;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  color: #f0d9b5;
+  background: rgba(201,168,76,0.08);
+  border: 1.5px solid rgba(201,168,76,0.25);
+  border-radius: 12px;
+  padding: 16px 28px;
+  text-align: center;
+  min-width: 260px;
+}
+
+.btn-copy {
+  background: transparent;
+  border: 1.5px solid rgba(201,168,76,0.4);
+  color: #c9a84c;
+  padding: 8px 24px;
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  transition: all 0.2s;
+}
+
+.btn-copy:hover {
+  background: rgba(201,168,76,0.1);
+  border-color: #c9a84c;
+}
+
+.btn-copy.copied {
+  color: #6fcf97;
+  border-color: #6fcf97;
+}
+
+/* ── Waiting Spinner ── */
+.waiting-spinner {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.waiting-spinner span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #c9a84c;
+  opacity: 0.3;
+  animation: bounce-dot 1.2s ease-in-out infinite;
+}
+
+.waiting-spinner span:nth-child(2) { animation-delay: 0.2s; }
+.waiting-spinner span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes bounce-dot {
+  0%, 80%, 100% { transform: scale(0.8); opacity: 0.3; }
+  40%            { transform: scale(1.2); opacity: 1;   }
+}
+
+.waiting-status {
+  font-size: 0.85rem;
+  color: rgba(240,235,224,0.4);
+}
+
+/* ════════════════════════════════════════════
+   GAME SCREEN
+════════════════════════════════════════════ */
+
+#game-screen {
+  flex-direction: column;
+  align-items: center;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(201,168,76,0.06) 0%, transparent 60%),
+    #0d0d1a;
+  min-height: 100vh;
+  padding-bottom: 20px;
+}
+
+/* ── Game Header ── */
+.game-header {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.game-logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #c9a84c, #f0d9b5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.room-pill {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.78rem;
+  color: rgba(240,235,224,0.4);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  padding: 5px 14px;
+  letter-spacing: 0.05em;
+}
+
+.room-pill span {
+  color: #c9a84c;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+}
+
+.btn-resign {
+  background: transparent;
+  border: 1px solid rgba(232,64,64,0.35);
+  color: rgba(232,64,64,0.6);
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.04em;
+}
+
+.btn-resign:hover {
+  background: rgba(232,64,64,0.1);
+  border-color: rgba(232,64,64,0.6);
+  color: #e84040;
+}
+
+/* ── Game Main Layout ── */
+.game-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px 0;
+  width: 100%;
+  max-width: 900px;
+}
+
+/* ── Player Bars ── */
+.player-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 520px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+}
+
+.player-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(201,168,76,0.12);
+  border: 1px solid rgba(201,168,76,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.player-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.player-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #f0ebe0;
+}
+
+.player-color-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(240,235,224,0.35);
+}
+
+.captured-pieces {
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  color: rgba(240,235,224,0.5);
+  min-width: 80px;
+  text-align: right;
+}
+
+/* ── Status Bar ── */
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 520px;
+  padding: 10px 16px;
+  margin-top: 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+}
+
+.turn-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.turn-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #c9a84c;
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+
+.turn-dot.white  { background: #f0d9b5; box-shadow: 0 0 6px rgba(240,217,181,0.6); }
+.turn-dot.black  { background: #2a2a2a; border: 2px solid #666; }
+.turn-dot.my-turn { animation: pulse-turn 1s ease-in-out infinite alternate; }
+
+@keyframes pulse-turn {
+  from { box-shadow: 0 0 4px rgba(201,168,76,0.4); }
+  to   { box-shadow: 0 0 12px rgba(201,168,76,0.9); }
+}
+
+.move-count {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.75rem;
+  color: rgba(240,235,224,0.3);
+  letter-spacing: 0.05em;
+}
+
+/* ── Move History ── */
+.move-history {
+  width: 100%;
+  max-width: 520px;
+  margin-top: 10px;
+  padding: 0 4px;
+}
+
+.history-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(240,235,224,0.25);
+  margin-bottom: 8px;
+  padding-left: 4px;
+}
+
+.move-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 4px;
+  list-style: none;
+  max-height: 100px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.move-list::-webkit-scrollbar {
+  width: 3px;
+}
+.move-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.move-list::-webkit-scrollbar-thumb {
+  background: rgba(201,168,76,0.3);
+  border-radius: 2px;
+}
+
+.move-list li {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.78rem;
+  color: rgba(240,235,224,0.5);
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.03);
+  transition: color 0.2s;
+}
+
+.move-list li:last-child {
+  color: #c9a84c;
+  background: rgba(201,168,76,0.08);
+}
+
+/* ════════════════════════════════════════════
+   TOAST NOTIFICATIONS
+════════════════════════════════════════════ */
+
+.toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%) translateY(0);
+  background: rgba(26,26,46,0.95);
+  border: 1px solid rgba(201,168,76,0.3);
+  color: #f0ebe0;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  z-index: 999;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  white-space: nowrap;
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+.toast.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(10px);
+}
+
+.toast.error {
+  border-color: rgba(232,64,64,0.4);
+  color: #ff8a8a;
+}
+
+.toast.success {
+  border-color: rgba(111,207,151,0.4);
+  color: #6fcf97;
+}

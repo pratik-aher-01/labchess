@@ -1,0 +1,25 @@
+# ─────────────────────────────────────────────
+#  LabChess — .gitignore
+# ─────────────────────────────────────────────
+
+# Firebase credentials — NEVER commit this
+config.js
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor folders
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Logs
+*.log
+npm-debug.log*
+
+# Node (if you ever add a build step)
+node_modules/
+package-lock.json
