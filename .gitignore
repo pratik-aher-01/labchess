@@ -3,7 +3,7 @@
 # ─────────────────────────────────────────────
 
 # Firebase credentials — NEVER commit this
-config.js
+
 
 # OS files
 .DS_Store
