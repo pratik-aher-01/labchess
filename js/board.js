@@ -31,14 +31,18 @@ export function isBoardReadOnly() {
 }
 
 export function flipBoardOrientation() {
-  if (!boardInstance) return;
+  if (!boardInstance) return currentOrientation;
   currentOrientation = currentOrientation === "white" ? "black" : "white";
-  boardInstance.orientation(currentOrientation);
+  if (typeof boardInstance.orientation === "function") {
+    boardInstance.orientation(currentOrientation);
+  } else if (typeof boardInstance.flip === "function") {
+    boardInstance.flip();
+  }
   return currentOrientation;
 }
 
 export function getCurrentOrientation() {
-  return currentOrientation;
+  return currentOrientation || "white";
 }
 
 // ─────────────────────────────────────────────

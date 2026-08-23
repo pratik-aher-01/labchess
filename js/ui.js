@@ -36,8 +36,10 @@ import {
   stepLiveMove,
   isViewingHistory,
   getMoveHistory,
+  getState,
+  updateCheckHighlight,
 } from "./game.js";
-import { initBoard, hideOverlay, flipBoardOrientation } from "./board.js";
+import { initBoard, hideOverlay, flipBoardOrientation, getCurrentOrientation, highlightLastMove } from "./board.js";
 import { toggleSound, isSoundEnabled } from "./audio.js";
 import { stopConfetti } from "./confetti.js";
 
@@ -399,6 +401,20 @@ function setupEventListeners() {
   document.getElementById("btn-replay-live")?.addEventListener("click", stepLiveMove);
   document.getElementById("btn-flip-board")?.addEventListener("click", () => {
     const orientation = flipBoardOrientation();
+    const gameState = typeof getState === "function" ? getState() : null;
+    if (gameState) {
+      updatePlayerBars(gameState.myColor, gameState.players, gameState.chess);
+      if (gameState.clocks) {
+        updateClocks(gameState.clocks.whiteTimeMs, gameState.clocks.blackTimeMs, gameState.myColor);
+      }
+      if (typeof updateCheckHighlight === "function") {
+        updateCheckHighlight();
+      }
+      if (gameState.historyMoves && gameState.historyMoves.length > 0) {
+        const lastM = gameState.historyMoves[gameState.historyMoves.length - 1];
+        if (lastM) highlightLastMove(lastM.from, lastM.to);
+      }
+    }
     showToast(`Flipped board to ${orientation.toUpperCase()} perspective`, "default", 1500);
   });
 
@@ -879,25 +895,32 @@ export function updateMoveHistory(moves = []) {
 }
 
 export function updatePlayerBars(myColor, players = {}, chess = null) {
-  const opponentColor = myColor === "white" ? "black" : "white";
-  const meData = players[myColor] || {};
-  const opponentData = players[opponentColor] || {};
+  const orientation = getCurrentOrientation() || (myColor === "black" ? "black" : "white");
+  const bottomColor = orientation;
+  const topColor = orientation === "white" ? "black" : "white";
+
+  const bottomData = players[bottomColor] || {};
+  const topData = players[topColor] || {};
 
   const nameMe = document.getElementById("name-me");
   const nameOpponent = document.getElementById("name-opponent");
-  if (nameMe) nameMe.textContent = myColor === "spectator" ? (players.white?.name || "White") : (meData.name || "You");
-  if (nameOpponent) nameOpponent.textContent = myColor === "spectator" ? (players.black?.name || "Black") : (opponentData.name || "Opponent");
+  if (nameMe) {
+    nameMe.textContent = bottomData.name || (bottomColor === "white" ? "White" : "Black");
+  }
+  if (nameOpponent) {
+    nameOpponent.textContent = topData.name || (topColor === "white" ? "White" : "Black");
+  }
 
   const avatarMe = document.getElementById("avatar-me");
   const avatarOpponent = document.getElementById("avatar-opponent");
-  if (avatarMe) avatarMe.textContent = myColor === "black" ? "♚" : "♔";
-  if (avatarOpponent) avatarOpponent.textContent = myColor === "black" ? "♔" : "♚";
+  if (avatarMe) avatarMe.textContent = bottomColor === "black" ? "♚" : "♔";
+  if (avatarOpponent) avatarOpponent.textContent = topColor === "black" ? "♚" : "♔";
 
   // Captured pieces & Material difference calculation
   if (chess) {
     const { mine, theirs, myAdvantage, opponentAdvantage } = getCapturedPieces(
       chess,
-      myColor === "spectator" ? "white" : myColor
+      bottomColor
     );
     const capturedMe = document.getElementById("captured-me");
     const capturedOpponent = document.getElementById("captured-opponent");
@@ -918,8 +941,9 @@ export function updatePlayerBars(myColor, players = {}, chess = null) {
 }
 
 export function updatePresenceIndicators(myColor, players = {}) {
-  const opponentColor = myColor === "white" ? "black" : "white";
-  const opponentOnline = players[opponentColor]?.connected ?? true;
+  const orientation = getCurrentOrientation() || (myColor === "black" ? "black" : "white");
+  const topColor = orientation === "white" ? "black" : "white";
+  const opponentOnline = players[topColor]?.connected ?? true;
 
   const dotOpponent = document.getElementById("presence-opponent");
   if (dotOpponent) {
@@ -970,14 +994,15 @@ export function updateClocks(whiteTimeMs, blackTimeMs, myColor) {
   clockMe.classList.remove("hidden");
   clockOpponent.classList.remove("hidden");
 
-  const myTime = myColor === "black" ? blackTimeMs : whiteTimeMs;
-  const oppTime = myColor === "black" ? whiteTimeMs : blackTimeMs;
+  const orientation = getCurrentOrientation() || (myColor === "black" ? "black" : "white");
+  const bottomTime = orientation === "black" ? blackTimeMs : whiteTimeMs;
+  const topTime = orientation === "black" ? whiteTimeMs : blackTimeMs;
 
-  clockMe.textContent = formatTime(myTime);
-  clockOpponent.textContent = formatTime(oppTime);
+  clockMe.textContent = formatTime(bottomTime);
+  clockOpponent.textContent = formatTime(topTime);
 
-  clockMe.classList.toggle("low-time", myTime < 20000 && myTime > 0);
-  clockOpponent.classList.toggle("low-time", oppTime < 20000 && oppTime > 0);
+  clockMe.classList.toggle("low-time", bottomTime < 20000 && bottomTime > 0);
+  clockOpponent.classList.toggle("low-time", topTime < 20000 && topTime > 0);
 }
 
 export function updateSpectatorCount(count) {
