@@ -30,6 +30,7 @@ let app = null;
 let auth = null;
 let db = null;
 let currentUser = null;
+let initPromise = null;
 let currentRoomCode = null;
 let myPlayerColor = null;
 let presenceDisconnectRef = null;
@@ -38,82 +39,97 @@ const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 const ROOM_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 // ─────────────────────────────────────────────
-//  INITIALIZATION
+//  INITIALIZATION (Singleton Promise)
 // ─────────────────────────────────────────────
 
-export async function initFirebase() {
-  if (app) return { app, auth, db, user: currentUser };
+export function initFirebase() {
+  if (initPromise) return initPromise;
 
-  app = initializeApp(config.firebase);
-  auth = getAuth(app);
-  db = getDatabase(app);
-
-  window._labchess_db = db;
-  window._labchess_auth = auth;
-
-  // Initialize App Check if enabled
-  if (config.appCheck && config.appCheck.enabled && config.appCheck.siteKey) {
+  initPromise = (async () => {
     try {
-      const { initializeAppCheck, ReCaptchaV3Provider } = await import(
-        "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js"
-      );
-      initializeAppCheck(app, {
-        provider: new ReCaptchaV3Provider(config.appCheck.siteKey),
-        isTokenAutoRefreshEnabled: config.appCheck.isTokenAutoRefreshEnabled ?? true,
-      });
-      console.log("[AppCheck] Initialized successfully");
-    } catch (err) {
-      console.warn("[AppCheck] Failed to initialize:", err);
-    }
-  }
+      if (!app) {
+        app = initializeApp(config.firebase);
+        auth = getAuth(app);
+        db = getDatabase(app);
 
-  // Setup connection monitoring
-  setupConnectionPresence();
+        window._labchess_db = db;
+        window._labchess_auth = auth;
 
-  // Perform anonymous authentication (with fallback)
-  currentUser = await new Promise((resolve) => {
-    try {
-      const unsubscribe = onAuthStateChanged(
-        auth,
-        (user) => {
-          unsubscribe();
-          if (user) {
-            resolve(user);
-          } else {
-            signInAnonymously(auth)
-              .then((cred) => resolve(cred.user))
-              .catch((err) => {
-                console.warn("[Auth] Using persistent fallback UID:", err.message);
+        // Initialize App Check if enabled
+        if (config.appCheck && config.appCheck.enabled && config.appCheck.siteKey) {
+          try {
+            const { initializeAppCheck, ReCaptchaV3Provider } = await import(
+              "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js"
+            );
+            initializeAppCheck(app, {
+              provider: new ReCaptchaV3Provider(config.appCheck.siteKey),
+              isTokenAutoRefreshEnabled: config.appCheck.isTokenAutoRefreshEnabled ?? true,
+            });
+            console.log("[AppCheck] Initialized successfully");
+          } catch (err) {
+            console.warn("[AppCheck] Failed to initialize:", err);
+          }
+        }
+
+        // Setup connection monitoring
+        setupConnectionPresence();
+      }
+
+      // Ensure user is authenticated
+      if (!currentUser) {
+        currentUser = await new Promise((resolve) => {
+          try {
+            const unsubscribe = onAuthStateChanged(
+              auth,
+              (user) => {
+                unsubscribe();
+                if (user) {
+                  resolve(user);
+                } else {
+                  signInAnonymously(auth)
+                    .then((cred) => resolve(cred.user))
+                    .catch((err) => {
+                      console.warn("[Auth] Using persistent fallback UID:", err.message);
+                      let fallbackUid = localStorage.getItem("labchess_fallback_uid");
+                      if (!fallbackUid) {
+                        fallbackUid =
+                          "anon_" +
+                          Math.random().toString(36).slice(2, 11) +
+                          "_" +
+                          Date.now().toString(36);
+                        localStorage.setItem("labchess_fallback_uid", fallbackUid);
+                      }
+                      resolve({ uid: fallbackUid, isAnonymous: true });
+                    });
+                }
+              },
+              () => {
                 let fallbackUid = localStorage.getItem("labchess_fallback_uid");
                 if (!fallbackUid) {
-                  fallbackUid =
-                    "anon_" +
-                    Math.random().toString(36).slice(2, 11) +
-                    "_" +
-                    Date.now().toString(36);
+                  fallbackUid = "anon_" + Math.random().toString(36).slice(2, 11);
                   localStorage.setItem("labchess_fallback_uid", fallbackUid);
                 }
                 resolve({ uid: fallbackUid, isAnonymous: true });
-              });
+              }
+            );
+          } catch (e) {
+            let fallbackUid = "anon_" + Math.random().toString(36).slice(2, 11);
+            resolve({ uid: fallbackUid, isAnonymous: true });
           }
-        },
-        () => {
-          let fallbackUid = localStorage.getItem("labchess_fallback_uid");
-          if (!fallbackUid) {
-            fallbackUid = "anon_" + Math.random().toString(36).slice(2, 11);
-            localStorage.setItem("labchess_fallback_uid", fallbackUid);
-          }
-          resolve({ uid: fallbackUid, isAnonymous: true });
-        }
-      );
-    } catch (e) {
-      let fallbackUid = "anon_" + Math.random().toString(36).slice(2, 11);
-      resolve({ uid: fallbackUid, isAnonymous: true });
-    }
-  });
+        });
+      }
 
-  console.log(`[Auth] Player UID ready: ${currentUser.uid}`);
-  return { app, auth, db, user: currentUser };
+      console.log(`[Auth] Player UID ready: ${currentUser?.uid}`);
+      return { app, auth, db, user: currentUser };
+    } catch (err) {
+      console.error("[Firebase] Initialization error:", err);
+      let fallbackUid = localStorage.getItem("labchess_fallback_uid") || ("anon_" + Math.random().toString(36).slice(2, 11));
+      currentUser = { uid: fallbackUid, isAnonymous: true };
+      return { app, auth, db, user: currentUser };
+    }
+  })();
+
+  return initPromise;
 }
 
 // ─────────────────────────────────────────────
@@ -170,8 +186,9 @@ export function generateRoomCode() {
 // ─────────────────────────────────────────────
 
 export async function createRoom(chosenColor = "white", playerName = "Host", timeSeconds = 0) {
-  await initFirebase();
-  const uid = currentUser.uid;
+  const authState = await initFirebase();
+  const uid = currentUser?.uid || authState?.user?.uid;
+  if (!uid) throw new Error("Authentication not ready. Please try again in a moment.");
   const sanitizedName = (playerName || "Host").trim().slice(0, 20);
 
   let attempts = 0;
@@ -250,13 +267,14 @@ export async function createRoom(chosenColor = "white", playerName = "Host", tim
 // ─────────────────────────────────────────────
 
 export async function joinRoom(rawCode, playerName = "Guest") {
-  await initFirebase();
+  const authState = await initFirebase();
   const code = (rawCode || "").trim().toUpperCase();
   if (code.length !== 6) {
     throw new Error("Please enter a valid 6-character room code.");
   }
 
-  const uid = currentUser.uid;
+  const uid = currentUser?.uid || authState?.user?.uid;
+  if (!uid) throw new Error("Authentication not ready. Please try again in a moment.");
   const sanitizedName = (playerName || "Guest").trim().slice(0, 20);
   const roomRef = ref(db, `rooms/${code}`);
 
