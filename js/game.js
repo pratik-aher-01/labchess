@@ -629,6 +629,27 @@ async function triggerAiMove() {
 
   if (!move) return;
 
+  // Deduct clocks for AI move
+  if (state.clocks && state.clocks.lastMoveTime) {
+    const elapsed = Date.now() - state.clocks.lastMoveTime;
+    const movingColor = aiColor === "w" ? "white" : "black";
+    const whiteTime =
+      movingColor === "white"
+        ? Math.max(0, state.clocks.whiteTimeMs - elapsed)
+        : state.clocks.whiteTimeMs;
+    const blackTime =
+      movingColor === "black"
+        ? Math.max(0, state.clocks.blackTimeMs - elapsed)
+        : state.clocks.blackTimeMs;
+
+    state.clocks = {
+      whiteTimeMs: whiteTime,
+      blackTimeMs: blackTime,
+      lastMoveTime: Date.now(),
+    };
+    updateClocks(whiteTime, blackTime, state.myColor);
+  }
+
   state.moveHistory.push(move.san);
   state.historyFens.push(state.chess.fen());
   state.historyMoves.push({ from: bestMove.from, to: bestMove.to });
