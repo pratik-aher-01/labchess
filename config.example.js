@@ -1,22 +1,21 @@
 // ─────────────────────────────────────────────
-//  LabChess — Firebase & Application Configuration
+//  LabChess — Firebase Configuration Template
+//  Copy this file to config.js and add your keys
 // ─────────────────────────────────────────────
 
 const config = {
   // Firebase Web SDK credentials
   firebase: {
-    apiKey:            "AIzaSyDcTgQuIoQGYefrjrLmx1URi381OfTmev4",
-    authDomain:        "labchess-4f5cb.firebaseapp.com",
-    databaseURL:       "https://labchess-4f5cb-default-rtdb.firebaseio.com",
-    projectId:         "labchess-4f5cb",
-    storageBucket:     "labchess-4f5cb.firebasestorage.app",
-    messagingSenderId: "765553562871",
-    appId:             "1:765553562871:web:f4797f92a8373cf9216ff2"
+    apiKey:            "YOUR_API_KEY",
+    authDomain:        "YOUR_PROJECT.firebaseapp.com",
+    databaseURL:       "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+    projectId:         "YOUR_PROJECT_ID",
+    storageBucket:     "YOUR_PROJECT.firebasestorage.app",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId:             "YOUR_APP_ID"
   },
 
   // App Check configuration (reCAPTCHA v3 or Debug Provider)
-  // Set siteKey when reCAPTCHA v3 is enabled in Firebase Console.
-  // Leave empty for local development or debug token mode.
   appCheck: {
     enabled: false,
     siteKey: "", // Enter your reCAPTCHA v3 site key for production
@@ -25,7 +24,7 @@ const config = {
 
   // Authoritative Cloud Functions configuration (optional)
   functions: {
-    enabled: false, // Set to true when deploying with Firebase Functions
+    enabled: false,
     region: "us-central1"
   },
 

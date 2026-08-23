@@ -2,24 +2,29 @@
 #  LabChess — .gitignore
 # ─────────────────────────────────────────────
 
-# Firebase credentials — NEVER commit this
-
-
 # OS files
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# Editor folders
+# Editor & IDE folders
 .vscode/
 .idea/
 *.suo
 *.user
 
-# Logs
-*.log
-npm-debug.log*
+# Firebase
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
 
-# Node (if you ever add a build step)
+# Node / Dependencies
 node_modules/
 package-lock.json
+
+# Service Account Keys & Secrets
+*serviceAccountKey*.json
+.env
+.env.local
+.env.*.local
