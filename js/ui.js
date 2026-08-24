@@ -54,6 +54,7 @@ let chatUnsubscribe = null;
 let reactionsUnsubscribe = null;
 let isChatOpen = false;
 let lastSeenChatCount = 0;
+let waitingRoomUnsub = null; // Fix 12: tracks listener during waiting screen
 
 // ─────────────────────────────────────────────
 //  INITIALIZATION ON PAGE LOAD
@@ -520,8 +521,12 @@ function setupEventListeners() {
     handleDrawResponse(false);
   });
 
-  // Cancel waiting
+  // Cancel waiting — clean up listener before returning to lobby (Fix 12)
   document.getElementById("btn-cancel-waiting")?.addEventListener("click", () => {
+    if (waitingRoomUnsub) {
+      waitingRoomUnsub();
+      waitingRoomUnsub = null;
+    }
     leaveGame();
     clearSession();
     showScreen("lobby-screen");
@@ -574,6 +579,12 @@ function setupEventListeners() {
 // ─────────────────────────────────────────────
 
 async function handleCreateRoom() {
+  // Clean up any stale waiting listener from a previous session
+  if (waitingRoomUnsub) {
+    waitingRoomUnsub();
+    waitingRoomUnsub = null;
+  }
+
   const btn = document.getElementById("btn-create");
   const name = getPlayerName();
   if (btn) {
@@ -588,11 +599,14 @@ async function handleCreateRoom() {
     document.getElementById("header-room-code").textContent = roomCode;
     showScreen("waiting-screen");
 
-    let unsub = null;
-    unsub = listenToRoom(roomCode, (roomData) => {
+    // Fix 12: store unsubscribe so the cancel button can clean it up
+    waitingRoomUnsub = listenToRoom(roomCode, (roomData) => {
       if (!roomData) return;
       if (roomData.metadata?.status === "active") {
-        if (unsub) unsub();
+        if (waitingRoomUnsub) {
+          waitingRoomUnsub();
+          waitingRoomUnsub = null;
+        }
         startGame(roomCode, color, roomData.game?.fen, roomData);
       }
     });
@@ -611,7 +625,9 @@ async function handleJoinRoom() {
   const input = document.getElementById("join-code-input");
   const btn = document.getElementById("btn-join");
   const code = input?.value.trim().toUpperCase();
-  const name = getPlayerName();
+  // Fix 15: prefer the join-panel's own name input if provided
+  const joinNameInput = document.getElementById("join-player-name-input");
+  const name = joinNameInput?.value.trim() || getPlayerName();
 
   if (!code || code.length !== 6) {
     showToast("Please enter a valid 6-character room code.", "error");

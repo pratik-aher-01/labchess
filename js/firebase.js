@@ -23,7 +23,10 @@ import {
   serverTimestamp,
   onDisconnect,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-import config from "../config.js";
+
+// Config is injected as window._labchessConfig by the inline <script> in index.html
+// This keeps config.js out of git while still making the credentials available.
+const config = window._labchessConfig || {};
 
 // ── Firebase Core Singletons ──
 let app = null;
@@ -157,14 +160,14 @@ function updatePresence(online) {
   const playerRef = ref(db, `rooms/${currentRoomCode}/players/${myPlayerColor}`);
   update(playerRef, {
     connected: online,
-    lastSeen: serverTimestamp(),
+    lastSeen: Date.now(),  // Use Date.now() — consistent with isNumber() validation rule
   }).catch(() => {});
 
   if (online) {
     presenceDisconnectRef = onDisconnect(playerRef);
     presenceDisconnectRef.update({
       connected: false,
-      lastSeen: serverTimestamp(),
+      lastSeen: Date.now(),
     });
   }
 }
@@ -214,7 +217,7 @@ export async function createRoom(chosenColor = "white", playerName = "Host", tim
         metadata: {
           hostUid: uid,
           status: "waiting",
-          createdAt: serverTimestamp(),
+          createdAt: now,          // Date.now() — avoids serverTimestamp sentinel failing .isNumber() rule
           expiresAt: expiresAt,
           rematchRequestedBy: null,
           drawOfferedBy: null,
@@ -224,9 +227,9 @@ export async function createRoom(chosenColor = "white", playerName = "Host", tim
           [hostColor]: {
             uid: uid,
             name: sanitizedName,
-            joinedAt: serverTimestamp(),
+            joinedAt: now,          // Date.now() — avoids serverTimestamp sentinel failing .isNumber() rule
             connected: true,
-            lastSeen: serverTimestamp(),
+            lastSeen: now,          // Date.now() — avoids serverTimestamp sentinel failing .isNumber() rule
           },
         },
         game: {

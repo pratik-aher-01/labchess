@@ -49,9 +49,17 @@ export function getCurrentOrientation() {
 //  INIT BOARD
 // ─────────────────────────────────────────────
 
+// Tracks whether click/tap listeners have been added to the board DOM element
+let clickListenersAttached = false;
+
 export function initBoard(fen = "start") {
+  // Always reset transient state on game start (fixes stale state across rematches)
+  selectedSquare = null;
+  pendingPromotionMove = null;
+
   if (boardInstance) {
-    boardInstance.position(fen, false);
+    // Board DOM already exists: just update position and re-apply orientation
+    boardInstance.position(fen === "start" ? "start" : fen, false);
     return;
   }
 
@@ -60,7 +68,8 @@ export function initBoard(fen = "start") {
     draggable: true,
     dropOffBoard: "snapback",
     sparePieces: false,
-    pieceTheme: "https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png",
+    // Piece images served from jsDelivr (reliable public CDN backed by npm)
+    pieceTheme: "https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/img/chesspieces/wikipedia/{piece}.png",
     onDragStart,
     onDrop,
     onMouseoverSquare,
@@ -68,7 +77,10 @@ export function initBoard(fen = "start") {
     onSnapEnd,
   });
 
-  setupClickAndTapToMove();
+  if (!clickListenersAttached) {
+    setupClickAndTapToMove();
+    clickListenersAttached = true;
+  }
 
   window.addEventListener("resize", () => {
     if (boardInstance) {

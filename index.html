@@ -14,6 +14,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
+  <!-- Favicon (Fix 14) -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#9823;</text></svg>" />
+  <link rel="shortcut icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#9823;</text></svg>" />
+
   <!-- Chessboard.js & Dependencies with Subresource Integrity (SRI) -->
   <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css" integrity="sha384-q94+BZtLrkL1/ohfjR8c6L+A6qzNH9R2hBLwyoAfu3i/WCvQjzL2RQJ3uNHDISdU" crossorigin="anonymous" />
   <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha384-1H217gwSVyLSIfaLxHbE7dRb3v4mYCKbpQvzx0cegeju1MVsGrX5xXxAvs/HgeFs" crossorigin="anonymous"></script>
@@ -24,6 +28,40 @@
   <link rel="stylesheet" href="css/board.css?v=3.1" />
   <link rel="stylesheet" href="css/ui.css?v=3.1" />
   <link rel="stylesheet" href="css/responsive.css?v=3.1" />
+
+  <!--
+    ─── FIREBASE CONFIG (inline — keep config.js gitignored) ───
+    This is intentionally inlined here so config.js never needs
+    to be committed to git. Firebase Web API keys are designed to
+    be public — real security is enforced by database.rules.json.
+  -->
+  <script>
+    window._labchessConfig = {
+      firebase: {
+        apiKey:            "AIzaSyDcTgQuIoQGYefrjrLmx1URi381OfTmev4",
+        authDomain:        "labchess-4f5cb.firebaseapp.com",
+        databaseURL:       "https://labchess-4f5cb-default-rtdb.firebaseio.com",
+        projectId:         "labchess-4f5cb",
+        storageBucket:     "labchess-4f5cb.firebasestorage.app",
+        messagingSenderId: "765553562871",
+        appId:             "1:765553562871:web:f4797f92a8373cf9216ff2"
+      },
+      appCheck: {
+        enabled: false,
+        siteKey: "",
+        isTokenAutoRefreshEnabled: true
+      },
+      functions: {
+        enabled: false,
+        region: "us-central1"
+      },
+      limits: {
+        roomCodeLength: 6,
+        roomTtlMinutes: 120,
+        maxPlayerNameLength: 20
+      }
+    };
+  </script>
 </head>
 
 <body>
@@ -115,6 +153,20 @@
         <!-- Right Panel: Join Room -->
         <div class="lobby-panel join-panel" id="panel-join">
           <h2 class="panel-title">Join Match</h2>
+
+          <!-- Fix 15: name input in join panel so joining players can set their display name -->
+          <div class="lobby-section">
+            <label for="join-player-name-input" class="section-label">Your Name</label>
+            <input
+              id="join-player-name-input"
+              class="text-input"
+              type="text"
+              maxlength="20"
+              placeholder="Anonymous"
+              autocomplete="nickname"
+              spellcheck="false"
+            />
+          </div>
 
           <div class="lobby-section">
             <label for="join-code-input" class="section-label">6-Letter Room Code</label>

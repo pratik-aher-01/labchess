@@ -28,3 +28,10 @@ package-lock.json
 .env
 .env.local
 .env.*.local
+
+# Firebase config with live credentials — inlined in index.html instead
+# See config.example.js for the template
+config.js
+
+# Local dev server tooling (not needed in production)
+package.json

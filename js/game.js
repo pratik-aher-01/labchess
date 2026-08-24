@@ -77,7 +77,7 @@ const state = {
 };
 
 // ── Highlight King in Check ──
-function updateCheckHighlight() {
+export function updateCheckHighlight() {
   document
     .querySelectorAll(".highlight-check")
     .forEach((el) => el.classList.remove("highlight-check"));
@@ -376,8 +376,22 @@ function onRemoteUpdate(roomData) {
   const currentFen = state.chess ? state.chess.fen() : "";
 
   if (game.clocks) {
+    // Fix 13: Re-anchor the local clock from the authoritative server values on every
+    // remote update. This resets any accumulated drift — each client re-syncs
+    // whiteTimeMs/blackTimeMs/lastMoveTime from the server after every move.
+    const clocksChanged =
+      !state.clocks ||
+      state.clocks.whiteTimeMs !== game.clocks.whiteTimeMs ||
+      state.clocks.blackTimeMs !== game.clocks.blackTimeMs ||
+      state.clocks.lastMoveTime !== game.clocks.lastMoveTime;
+
     state.clocks = game.clocks;
-    if (!state.clockInterval && !state.gameOver && roomData.metadata?.status === "active") {
+
+    if (clocksChanged && !state.gameOver && roomData.metadata?.status === "active") {
+      // Restart ticker so elapsed calculation starts fresh from the new server values
+      stopClockTicker();
+      startClockTicker();
+    } else if (!state.clockInterval && !state.gameOver && roomData.metadata?.status === "active") {
       startClockTicker();
     }
   }
@@ -935,8 +949,28 @@ export async function requestRematch() {
 
   if (!state.roomCode) return;
   try {
-    await requestOrAcceptRematch(state.roomCode, state.myColor);
-    showToast("Rematch request sent to opponent.", "success");
+    const updatedRoom = await requestOrAcceptRematch(state.roomCode, state.myColor);
+
+    // Fix 16: When the rematch transaction fully committed (both sides agreed),
+    // immediately update local color/orientation from the snapshot so the
+    // board doesn't briefly show the wrong side while waiting for onRemoteUpdate.
+    if (
+      updatedRoom?.metadata?.rematchRequestedBy === null &&
+      updatedRoom?.game?.status === "in_progress"
+    ) {
+      const myUid = getCurrentUser()?.uid;
+      if (updatedRoom.players?.white?.uid === myUid && state.myColor !== "white") {
+        state.myColor = "white";
+        setBoardOrientation("white");
+        if (state.roomCode) saveSession(state.roomCode, "white", updatedRoom.players.white?.name || "Player");
+      } else if (updatedRoom.players?.black?.uid === myUid && state.myColor !== "black") {
+        state.myColor = "black";
+        setBoardOrientation("black");
+        if (state.roomCode) saveSession(state.roomCode, "black", updatedRoom.players.black?.name || "Player");
+      }
+    } else {
+      showToast("Rematch request sent to opponent.", "success");
+    }
   } catch (err) {
     console.error("[Game] Rematch request failed:", err);
     showToast("Could not request rematch.", "error");
