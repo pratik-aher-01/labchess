@@ -67,9 +67,8 @@ export function initBoard(fen = "start") {
     position: fen,
     draggable: true,
     dropOffBoard: "snapback",
-    sparePieces: false,
-    // Piece images served from jsDelivr (reliable public CDN backed by npm)
-    pieceTheme: "https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/img/chesspieces/wikipedia/{piece}.png",
+    // Self-hosted piece images (offline-capable, reliable, fast)
+    pieceTheme: "img/chesspieces/wikipedia/{piece}.png",
     onDragStart,
     onDrop,
     onMouseoverSquare,
