@@ -76,6 +76,8 @@ const state = {
   isSpectator: false,
 };
 
+let gameOverModalTimer = null;
+
 // ── Highlight King in Check ──
 export function updateCheckHighlight() {
   document
@@ -289,6 +291,10 @@ export function cleanUpPreviousGame() {
   }
   stopClockTicker();
   stopConfetti();
+  if (gameOverModalTimer) {
+    clearTimeout(gameOverModalTimer);
+    gameOverModalTimer = null;
+  }
 
   state.chess = null;
   state.roomCode = null;
@@ -837,6 +843,11 @@ function handleGameOver(winner, statusReason) {
   state.isMyTurn = false;
   stopClockTicker();
 
+  if (gameOverModalTimer) {
+    clearTimeout(gameOverModalTimer);
+    gameOverModalTimer = null;
+  }
+
   const myColorChar = state.myColor === "white" ? "w" : "b";
   const isWin = winner === myColorChar;
   playGameOverSound(isWin);
@@ -870,8 +881,6 @@ function handleGameOver(winner, statusReason) {
     if (statusReason === "resigned") sub = "Opponent resigned";
     else if (statusReason === "timeout") sub = "Opponent ran out of time";
     else sub = "Checkmate! Brilliant victory";
-
-    startVictoryConfetti(6000);
   } else {
     emoji = "💀";
     title = "Defeat";
@@ -881,8 +890,26 @@ function handleGameOver(winner, statusReason) {
     stopConfetti();
   }
 
-  showOverlay(emoji, title, sub);
+  // Update status bar & keep the checkmate / check glow visible immediately
   updateStatusBar(state.chess, false, state.myColor, { gameOver: true, winner });
+  updateCheckHighlight();
+
+  // Delay before showing the game over modal:
+  // - 1500ms on Checkmate so players can clearly see the checkmating move, attacking pieces, and trapped king
+  // - 1000ms on Stalemate / Repetition
+  // - 350ms on Resign / Timeout
+  const modalDelay =
+    statusReason === "checkmate" ? 1500 : statusReason === "stalemate" ? 1000 : 350;
+
+  gameOverModalTimer = setTimeout(() => {
+    if (!state.gameOver) return;
+
+    if (isWin && winner !== "draw") {
+      startVictoryConfetti(6000);
+    }
+
+    showOverlay(emoji, title, sub);
+  }, modalDelay);
 }
 
 // ─────────────────────────────────────────────
