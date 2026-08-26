@@ -33,5 +33,42 @@
         }
       ]
     }
+  ],
+  "redirects": [
+    {
+      "source": "/js/ai.js",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/js/firebase.js",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/js/game.js",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/js/ui.js",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/js/board.js",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/js/audio.js",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/js/confetti.js",
+      "destination": "/",
+      "permanent": false
+    }
   ]
 }

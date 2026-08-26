@@ -1,0 +1,14 @@
+{
+  "name": "labchess",
+  "version": "1.0.0",
+  "description": "Zero-login real-time multiplayer chess",
+  "scripts": {
+    "build": "esbuild js/ui.js --bundle --minify --format=esm --target=es2020 --outfile=dist/bundle.min.js",
+    "dev": "npm run build && http-server . -p 8080 --cors -c-1 -o",
+    "start": "npm run dev"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "http-server": "^14.1.1"
+  }
+}

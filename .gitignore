@@ -21,7 +21,6 @@ ui-debug.log*
 
 # Node / Dependencies
 node_modules/
-package-lock.json
 
 # Service Account Keys & Secrets
 *serviceAccountKey*.json
@@ -32,6 +31,3 @@ package-lock.json
 # Firebase config with live credentials — inlined in index.html instead
 # See config.example.js for the template
 config.js
-
-# Local dev server tooling (not needed in production)
-package.json
