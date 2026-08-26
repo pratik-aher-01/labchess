@@ -7,8 +7,10 @@
     "dev": "npm run build && http-server . -p 8080 --cors -c-1 -o",
     "start": "npm run dev"
   },
+  "dependencies": {
+    "esbuild": "^0.28.2"
+  },
   "devDependencies": {
-    "esbuild": "^0.28.2",
     "http-server": "^14.1.1"
   }
 }

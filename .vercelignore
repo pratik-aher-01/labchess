@@ -1,0 +1,7 @@
+# Vercel ignore file
+# Prevents Vercel from treating Firebase Cloud Functions as Vercel serverless functions
+functions/
+test/
+database.rules.json
+firebase.json
+.firebase/
