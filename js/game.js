@@ -943,7 +943,7 @@ function handleGameOver(winner, statusReason) {
 let isResigning = false;
 
 export async function resign() {
-  if (state.gameOver || isResigning) return;
+  if (state.gameOver || isResigning || state.isSpectator) return;
 
   if (state.isAiMode) {
     isResigning = true;
@@ -970,7 +970,7 @@ export async function resign() {
 }
 
 export async function offerDraw() {
-  if (state.gameOver) return;
+  if (state.gameOver || state.isSpectator) return;
 
   if (state.isAiMode) {
     showToast("The AI bot declined your draw offer.", "default");
@@ -987,7 +987,7 @@ export async function offerDraw() {
 }
 
 export async function handleDrawResponse(accept) {
-  if (!state.roomCode) return;
+  if (!state.roomCode || state.isSpectator) return;
   try {
     await fbRespondToDraw(state.roomCode, accept);
     hideDrawOfferModal();
@@ -1000,6 +1000,8 @@ export async function handleDrawResponse(accept) {
 }
 
 export async function requestRematch() {
+  if (state.isSpectator) return;
+
   if (state.isAiMode) {
     initAiGame(state.myColor, state.aiLevel, state.clocks ? state.clocks.whiteTimeMs / 1000 : 0);
     return;

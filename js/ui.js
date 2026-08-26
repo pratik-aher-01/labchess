@@ -80,21 +80,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // Check for active session to resume (page refresh recovery)
-  try {
-    const existing = await checkExistingSession();
-    if (existing && existing.roomCode && existing.color) {
-      console.log(`[Session] Resuming active game: ${existing.roomCode}`);
-      showToast("Resuming your active game session...", "success", 2500);
-      startGame(
-        existing.roomCode,
-        existing.color,
-        existing.roomData?.game?.fen,
-        existing.roomData
-      );
+  // Check URL room parameter first. If user opens a room link, prioritize it over old sessions!
+  const hasUrlRoom = checkUrlForRoomCode();
+
+  if (!hasUrlRoom) {
+    // Check for active session to resume (page refresh recovery)
+    try {
+      const existing = await checkExistingSession();
+      if (existing && existing.roomCode && existing.color) {
+        console.log(`[Session] Resuming active game: ${existing.roomCode}`);
+        showToast("Resuming your active game session...", "success", 2500);
+        startGame(
+          existing.roomCode,
+          existing.color,
+          existing.roomData?.game?.fen,
+          existing.roomData
+        );
+      }
+    } catch (err) {
+      console.warn("[Session] Could not restore session:", err);
     }
-  } catch (err) {
-    console.warn("[Session] Could not restore session:", err);
   }
 });
 
@@ -110,11 +115,14 @@ export function showScreen(id) {
     m.classList.add("hidden");
   });
 
-  // Clean URL query params if returning to lobby
-  if (id === "lobby-screen" && window.location.search) {
-    window.history.replaceState({}, document.title, window.location.pathname);
-    const joinInput = document.getElementById("join-code-input");
-    if (joinInput) joinInput.value = "";
+  // Clean URL query params and spectator mode if returning to lobby
+  if (id === "lobby-screen") {
+    setSpectatorModeUI(false);
+    if (window.location.search) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      const joinInput = document.getElementById("join-code-input");
+      if (joinInput) joinInput.value = "";
+    }
   }
 
   document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
@@ -122,6 +130,25 @@ export function showScreen(id) {
   if (target) {
     target.classList.add("active");
     window.scrollTo(0, 0);
+  }
+}
+
+export function setSpectatorModeUI(isSpectator) {
+  const btnDraw = document.getElementById("btn-draw");
+  const btnResign = document.getElementById("btn-resign");
+  const btnRematch = document.getElementById("btn-rematch");
+  const btnOverlayLobby = document.getElementById("btn-overlay-lobby");
+
+  if (isSpectator) {
+    btnDraw?.classList.add("hidden");
+    btnResign?.classList.add("hidden");
+    btnRematch?.classList.add("hidden");
+    if (btnOverlayLobby) btnOverlayLobby.textContent = "Exit Spectate";
+  } else {
+    btnDraw?.classList.remove("hidden");
+    btnResign?.classList.remove("hidden");
+    btnRematch?.classList.remove("hidden");
+    if (btnOverlayLobby) btnOverlayLobby.textContent = "Return to Lobby";
   }
 }
 
@@ -324,6 +351,7 @@ function setupEventListeners() {
   document.getElementById("btn-start-ai")?.addEventListener("click", () => {
     showScreen("game-screen");
     document.getElementById("header-room-code").textContent = "BOT";
+    setSpectatorModeUI(false);
     initBoard("start");
     initAiGame(selectedAiColor, selectedAiDifficulty, selectedAiTime);
     showToast(`Started match against ${selectedAiDifficulty.toUpperCase()} Bot!`, "success");
@@ -668,6 +696,7 @@ async function handleJoinRoom() {
       if (ok) {
         showScreen("game-screen");
         document.getElementById("header-room-code").textContent = code;
+        setSpectatorModeUI(true);
         initBoard("start");
         initSpectatorGame(code, name);
         setupRoomChannels(code);
@@ -692,6 +721,7 @@ function startGame(roomCode, myColor, fen, roomData) {
   showScreen("game-screen");
   document.getElementById("header-room-code").textContent = roomCode;
 
+  setSpectatorModeUI(false);
   initBoard(fen || "start");
   initGame(roomCode, myColor, fen, roomData);
   setupRoomChannels(roomCode);
@@ -776,24 +806,28 @@ function checkUrlForRoomCode() {
     const isSpectate = params.get("spectate") === "true";
 
     if (roomParam && roomParam.length === 6) {
+      const code = roomParam.toUpperCase();
       const name = getPlayerName();
       if (isSpectate) {
         showScreen("game-screen");
-        document.getElementById("header-room-code").textContent = roomParam.toUpperCase();
+        document.getElementById("header-room-code").textContent = code;
+        setSpectatorModeUI(true);
         initBoard("start");
-        initSpectatorGame(roomParam.toUpperCase(), name);
-        setupRoomChannels(roomParam.toUpperCase());
-        showToast(`Watching Room ${roomParam.toUpperCase()} as Spectator`, "success");
+        initSpectatorGame(code, name);
+        setupRoomChannels(code);
+        showToast(`Watching Room ${code} as Spectator`, "success");
       } else {
         const input = document.getElementById("join-code-input");
         if (input) {
-          input.value = roomParam.toUpperCase();
-          showToast(`Room code ${roomParam.toUpperCase()} detected in URL.`, "default");
+          input.value = code;
+          showToast(`Room code ${code} detected in URL.`, "default");
           document.getElementById("tab-join")?.click();
         }
       }
+      return true;
     }
   } catch (e) {}
+  return false;
 }
 
 function loadStoredPlayerName() {

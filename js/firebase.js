@@ -468,6 +468,7 @@ export async function submitMove(
 export async function offerDraw(roomCode) {
   const code = (roomCode || currentRoomCode).toUpperCase();
   const uid = currentUser?.uid;
+  if (!uid || (myPlayerColor !== "white" && myPlayerColor !== "black")) return;
   await update(ref(db, `rooms/${code}/metadata`), {
     drawOfferedBy: uid,
   });
@@ -475,6 +476,7 @@ export async function offerDraw(roomCode) {
 
 export async function respondToDraw(roomCode, accept) {
   const code = (roomCode || currentRoomCode).toUpperCase();
+  if (myPlayerColor !== "white" && myPlayerColor !== "black") return;
 
   if (config.functions && config.functions.enabled && functionsInstance) {
     try {
@@ -509,6 +511,7 @@ export async function respondToDraw(roomCode, accept) {
 
 export async function claimTimeout(roomCode, winnerColor) {
   const code = (roomCode || currentRoomCode).toUpperCase();
+  if (myPlayerColor !== "white" && myPlayerColor !== "black") return;
 
   if (config.functions && config.functions.enabled && functionsInstance) {
     try {
@@ -535,6 +538,9 @@ export async function claimTimeout(roomCode, winnerColor) {
 // ─────────────────────────────────────────────
 
 export async function resignGame(roomCode, myColor) {
+  if (myColor !== "white" && myColor !== "black") {
+    throw new Error("Only active players can resign.");
+  }
   const code = (roomCode || currentRoomCode).toUpperCase();
   const winner = myColor === "white" ? "b" : "w";
 
@@ -552,6 +558,9 @@ export async function resignGame(roomCode, myColor) {
 // ─────────────────────────────────────────────
 
 export async function requestOrAcceptRematch(roomCode, myColor) {
+  if (myColor !== "white" && myColor !== "black") {
+    throw new Error("Only active players can request a rematch.");
+  }
   const code = (roomCode || currentRoomCode).toUpperCase();
   const uid = currentUser?.uid;
   const roomRef = ref(db, `rooms/${code}`);
@@ -779,6 +788,12 @@ export async function checkExistingSession() {
     const session = JSON.parse(raw);
     if (!session.roomCode) return null;
 
+    // Check if session is older than 2 hours (expired)
+    if (session.timestamp && Date.now() - session.timestamp > 2 * 60 * 60 * 1000) {
+      clearSession();
+      return null;
+    }
+
     await initFirebase();
     const uid = currentUser?.uid;
     const snap = await get(ref(db, `rooms/${session.roomCode}`));
@@ -789,6 +804,19 @@ export async function checkExistingSession() {
     }
 
     const room = snap.val();
+    const metadata = room.metadata || {};
+
+    // If game has concluded or expired, do not auto-resume old session
+    if (
+      metadata.status === "finished" ||
+      metadata.status === "expired" ||
+      room.game?.status !== "in_progress" ||
+      (metadata.expiresAt && Date.now() > metadata.expiresAt)
+    ) {
+      clearSession();
+      return null;
+    }
+
     const players = room.players || {};
 
     let confirmedColor = null;
