@@ -22,6 +22,8 @@ import {
   runTransaction,
   serverTimestamp,
   onDisconnect,
+  query,
+  limitToLast,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 // Config is injected as window._labchessConfig by the inline <script> in index.html
@@ -32,6 +34,7 @@ const config = window._labchessConfig || {};
 let app = null;
 let auth = null;
 let db = null;
+let functionsInstance = null;
 let currentUser = null;
 let initPromise = null;
 let currentRoomCode = null;
@@ -74,6 +77,19 @@ export function initFirebase() {
           }
         }
 
+        // Initialize Cloud Functions if enabled
+        if (config.functions && config.functions.enabled) {
+          try {
+            const { getFunctions } = await import(
+              "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js"
+            );
+            functionsInstance = getFunctions(app, config.functions.region || "us-central1");
+            console.log("[Functions] Initialized successfully");
+          } catch (err) {
+            console.warn("[Functions] Failed to initialize:", err);
+          }
+        }
+
         // Setup connection monitoring
         setupConnectionPresence();
       }
@@ -92,31 +108,43 @@ export function initFirebase() {
                   signInAnonymously(auth)
                     .then((cred) => resolve(cred.user))
                     .catch((err) => {
-                      console.warn("[Auth] Using persistent fallback UID:", err.message);
-                      let fallbackUid = localStorage.getItem("labchess_fallback_uid");
-                      if (!fallbackUid) {
-                        fallbackUid =
-                          "anon_" +
-                          Math.random().toString(36).slice(2, 11) +
-                          "_" +
-                          Date.now().toString(36);
-                        localStorage.setItem("labchess_fallback_uid", fallbackUid);
-                      }
-                      resolve({ uid: fallbackUid, isAnonymous: true });
-                    });
+                  console.warn("[Auth] Using persistent fallback UID:", err.message);
+                  let fallbackUid = localStorage.getItem("labchess_fallback_uid");
+                  if (!fallbackUid) {
+                    // Fix #14: use crypto.randomUUID() (128-bit) instead of
+                    // Math.random() (~46-bit) to avoid UID collisions.
+                    fallbackUid = "anon_" + (
+                      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+                        ? crypto.randomUUID().replace(/-/g, "")
+                        : Math.random().toString(36).slice(2, 11) + "_" + Date.now().toString(36)
+                    );
+                    localStorage.setItem("labchess_fallback_uid", fallbackUid);
+                  }
+                  resolve({ uid: fallbackUid, isAnonymous: true });
+                });
                 }
               },
               () => {
                 let fallbackUid = localStorage.getItem("labchess_fallback_uid");
                 if (!fallbackUid) {
-                  fallbackUid = "anon_" + Math.random().toString(36).slice(2, 11);
+                  // Fix #14: use crypto.randomUUID() for error-path fallback too
+                  fallbackUid = "anon_" + (
+                    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+                      ? crypto.randomUUID().replace(/-/g, "")
+                      : Math.random().toString(36).slice(2, 11)
+                  );
                   localStorage.setItem("labchess_fallback_uid", fallbackUid);
                 }
                 resolve({ uid: fallbackUid, isAnonymous: true });
               }
             );
           } catch (e) {
-            let fallbackUid = "anon_" + Math.random().toString(36).slice(2, 11);
+            // Fix #14: use crypto.randomUUID() in final catch path too
+            const fallbackUid = "anon_" + (
+              typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+                ? crypto.randomUUID().replace(/-/g, "")
+                : Math.random().toString(36).slice(2, 11)
+            );
             resolve({ uid: fallbackUid, isAnonymous: true });
           }
         });
@@ -167,6 +195,10 @@ function updatePresence(online) {
     presenceDisconnectRef = onDisconnect(playerRef);
     presenceDisconnectRef.update({
       connected: false,
+      // Fix #11 (partial): Date.now() here is evaluated at registration time, not at
+      // actual disconnect time. A full fix requires server-side Cloud Functions.
+      // The value will be stale by the session duration, but is acceptable for
+      // "last seen" display purposes (it shows the last presence refresh time).
       lastSeen: Date.now(),
     });
   }
@@ -194,42 +226,47 @@ export async function createRoom(chosenColor = "white", playerName = "Host", tim
   if (!uid) throw new Error("Authentication not ready. Please try again in a moment.");
   const sanitizedName = (playerName || "Host").trim().slice(0, 20);
 
-  let attempts = 0;
-  let roomCode = "";
+  const hostColor = chosenColor === "black" ? "black" : "white";
+  const timeMs = timeSeconds > 0 ? timeSeconds * 1000 : 0;
 
-  while (attempts < 5) {
-    attempts++;
+  // Fix #13: Use runTransaction to atomically claim a unique room code,
+  // eliminating the TOCTOU race that existed with the old get+set pattern.
+  let roomCode = "";
+  let committed = false;
+
+  for (let attempts = 0; attempts < 5 && !committed; attempts++) {
     roomCode = generateRoomCode();
     const roomRef = ref(db, `rooms/${roomCode}`);
-    const existing = await get(roomRef);
 
-    if (
-      !existing.exists() ||
-      (existing.val()?.metadata?.expiresAt &&
-        Date.now() > existing.val().metadata.expiresAt)
-    ) {
+    const txResult = await runTransaction(roomRef, (existing) => {
+      // Only claim the slot if it is empty or expired
+      if (
+        existing !== null &&
+        !(existing?.metadata?.expiresAt && Date.now() > existing.metadata.expiresAt)
+      ) {
+        return; // abort — slot is taken
+      }
+
       const now = Date.now();
       const expiresAt = now + (config.limits?.roomTtlMinutes || 120) * 60 * 1000;
-      const hostColor = chosenColor === "black" ? "black" : "white";
-      const timeMs = timeSeconds > 0 ? timeSeconds * 1000 : 0;
 
-      const newRoom = {
+      return {
         metadata: {
           hostUid: uid,
           status: "waiting",
-          createdAt: now,          // Date.now() — avoids serverTimestamp sentinel failing .isNumber() rule
+          createdAt: now,
           expiresAt: expiresAt,
           rematchRequestedBy: null,
           drawOfferedBy: null,
-          timeControl: timeSeconds, // 0 = unlimited
+          timeControl: timeSeconds,
         },
         players: {
           [hostColor]: {
             uid: uid,
             name: sanitizedName,
-            joinedAt: now,          // Date.now() — avoids serverTimestamp sentinel failing .isNumber() rule
+            joinedAt: now,
             connected: true,
-            lastSeen: now,          // Date.now() — avoids serverTimestamp sentinel failing .isNumber() rule
+            lastSeen: now,
           },
         },
         game: {
@@ -241,28 +278,28 @@ export async function createRoom(chosenColor = "white", playerName = "Host", tim
           lastMove: null,
           clocks:
             timeMs > 0
-              ? {
-                  whiteTimeMs: timeMs,
-                  blackTimeMs: timeMs,
-                  lastMoveTime: null,
-                }
+              ? { whiteTimeMs: timeMs, blackTimeMs: timeMs, lastMoveTime: null }
               : null,
         },
       };
+    });
 
-      await set(roomRef, newRoom);
-
-      currentRoomCode = roomCode;
-      myPlayerColor = hostColor;
-      updatePresence(true);
-      saveSession(roomCode, hostColor, sanitizedName);
-
-      console.log(`[Firebase] Room created: ${roomCode} | Color: ${hostColor} | Time: ${timeSeconds}s`);
-      return { roomCode, color: hostColor };
+    if (txResult.committed) {
+      committed = true;
     }
   }
 
-  throw new Error("Unable to create unique room code. Please try again.");
+  if (!committed) {
+    throw new Error("Unable to create unique room code. Please try again.");
+  }
+
+  currentRoomCode = roomCode;
+  myPlayerColor = hostColor;
+  updatePresence(true);
+  saveSession(roomCode, hostColor, sanitizedName);
+
+  console.log(`[Firebase] Room created: ${roomCode} | Color: ${hostColor} | Time: ${timeSeconds}s`);
+  return { roomCode, color: hostColor };
 }
 
 // ─────────────────────────────────────────────
@@ -366,6 +403,25 @@ export async function submitMove(
   const uid = currentUser?.uid;
   if (!uid) throw new Error("Unauthenticated");
 
+  // Server-authoritative move submission via Cloud Functions when enabled
+  if (config.functions && config.functions.enabled && functionsInstance) {
+    try {
+      const { httpsCallable } = await import(
+        "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js"
+      );
+      const fnSubmit = httpsCallable(functionsInstance, "submitMove");
+      await fnSubmit({
+        roomCode: code,
+        from,
+        to,
+        promotion: promotion || null,
+      });
+      return;
+    } catch (err) {
+      console.warn("[Functions] submitMove Cloud Function failed, falling back to RTDB update:", err);
+    }
+  }
+
   const movePayload = {
     playerUid: uid,
     from,
@@ -419,6 +475,20 @@ export async function offerDraw(roomCode) {
 
 export async function respondToDraw(roomCode, accept) {
   const code = (roomCode || currentRoomCode).toUpperCase();
+
+  if (config.functions && config.functions.enabled && functionsInstance) {
+    try {
+      const { httpsCallable } = await import(
+        "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js"
+      );
+      const fnDraw = httpsCallable(functionsInstance, "respondToDraw");
+      await fnDraw({ roomCode: code, accept: !!accept });
+      return;
+    } catch (err) {
+      console.warn("[Functions] respondToDraw Cloud Function failed, falling back to RTDB update:", err);
+    }
+  }
+
   if (accept) {
     const updates = {};
     updates[`rooms/${code}/game/status`] = "draw";
@@ -439,6 +509,20 @@ export async function respondToDraw(roomCode, accept) {
 
 export async function claimTimeout(roomCode, winnerColor) {
   const code = (roomCode || currentRoomCode).toUpperCase();
+
+  if (config.functions && config.functions.enabled && functionsInstance) {
+    try {
+      const { httpsCallable } = await import(
+        "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js"
+      );
+      const fnTimeout = httpsCallable(functionsInstance, "claimTimeout");
+      await fnTimeout({ roomCode: code });
+      return;
+    } catch (err) {
+      console.warn("[Functions] claimTimeout Cloud Function failed, falling back to RTDB update:", err);
+    }
+  }
+
   const updates = {};
   updates[`rooms/${code}/game/status`] = "timeout";
   updates[`rooms/${code}/game/winner`] = winnerColor === "white" ? "w" : "b";
@@ -607,14 +691,18 @@ export function listenToChat(roomCode, callback) {
   const code = roomCode.toUpperCase();
   const chatRef = ref(db, `rooms/${code}/chat`);
 
+  // Fix #18: Limit to the last 100 messages so unbounded chat history
+  // does not accumulate in memory or cause large DOM growth.
+  const chatQuery = query(chatRef, limitToLast(100));
+
   const handler = (snap) => {
     const val = snap.val() || {};
     const messages = Object.values(val).sort((a, b) => a.timestamp - b.timestamp);
     callback(messages);
   };
 
-  onValue(chatRef, handler);
-  return () => off(chatRef, "value", handler);
+  onValue(chatQuery, handler);
+  return () => off(chatQuery, "value", handler);
 }
 
 export async function sendReaction(roomCode, emoji) {

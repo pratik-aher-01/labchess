@@ -77,6 +77,8 @@ const state = {
 };
 
 let gameOverModalTimer = null;
+// Fix #8: Track the AI first-move timer so it can be cancelled on cleanup
+let aiFirstMoveTimer = null;
 
 // ── Highlight King in Check ──
 export function updateCheckHighlight() {
@@ -269,8 +271,12 @@ export function initAiGame(chosenColor = "white", difficulty = "medium", timeSec
   updateReplayControls(state.historyIndex, state.historyFens.length);
 
   // If player chose Black, AI (White) makes the first move!
+  // Fix #8: Store the timer ID so cleanUpPreviousGame can cancel it if needed
   if (playerColor === "black") {
-    setTimeout(triggerAiMove, 600);
+    aiFirstMoveTimer = setTimeout(() => {
+      aiFirstMoveTimer = null;
+      triggerAiMove();
+    }, 600);
   }
 
   console.log(`[Game] AI practice match started | Level: ${difficulty} | Color: ${playerColor}`);
@@ -294,6 +300,11 @@ export function cleanUpPreviousGame() {
   if (gameOverModalTimer) {
     clearTimeout(gameOverModalTimer);
     gameOverModalTimer = null;
+  }
+  // Fix #8: Cancel any pending first-move AI timer to prevent it firing into the new game
+  if (aiFirstMoveTimer) {
+    clearTimeout(aiFirstMoveTimer);
+    aiFirstMoveTimer = null;
   }
 
   state.chess = null;
@@ -328,7 +339,12 @@ function rebuildHistoryFens(sortedMoves) {
   state.historyMoves = [];
 
   for (const m of sortedMoves) {
-    tempChess.move({ from: m.from, to: m.to, promotion: m.promotion || "q" });
+    // Fix #5: Check the return value — skip invalid/corrupted move records
+    const result = tempChess.move({ from: m.from, to: m.to, promotion: m.promotion || "q" });
+    if (!result) {
+      console.warn("[Game] rebuildHistoryFens: skipped invalid move", m);
+      continue;
+    }
     state.historyFens.push(tempChess.fen());
     state.historyMoves.push({ from: m.from, to: m.to });
   }
@@ -554,9 +570,11 @@ export async function tryMove(from, to, promotionPiece = "q") {
   const currentFen = state.chess.fen();
 
   // Deduct clocks
+  // Fix #7: Capture a single timestamp to avoid drift from two Date.now() calls
   let updatedClocks = null;
   if (state.clocks && state.clocks.lastMoveTime) {
-    const elapsed = Date.now() - state.clocks.lastMoveTime;
+    const now = Date.now();
+    const elapsed = now - state.clocks.lastMoveTime;
     const movingColor = state.myColor;
     const whiteTime =
       movingColor === "white"
@@ -570,7 +588,7 @@ export async function tryMove(from, to, promotionPiece = "q") {
     updatedClocks = {
       whiteTimeMs: whiteTime,
       blackTimeMs: blackTime,
-      lastMoveTime: Date.now(),
+      lastMoveTime: now,
     };
     state.clocks = updatedClocks;
   }
@@ -651,7 +669,8 @@ async function triggerAiMove() {
 
   // Deduct clocks for AI move
   if (state.clocks && state.clocks.lastMoveTime) {
-    const elapsed = Date.now() - state.clocks.lastMoveTime;
+    const now = Date.now();
+    const elapsed = now - state.clocks.lastMoveTime;
     const movingColor = aiColor === "w" ? "white" : "black";
     const whiteTime =
       movingColor === "white"
@@ -665,7 +684,7 @@ async function triggerAiMove() {
     state.clocks = {
       whiteTimeMs: whiteTime,
       blackTimeMs: blackTime,
-      lastMoveTime: Date.now(),
+      lastMoveTime: now,
     };
     updateClocks(whiteTime, blackTime, state.myColor);
   }
@@ -765,7 +784,9 @@ export function stepPrevMove() {
   if (!state.historyFens || state.historyFens.length <= 1) return;
   const maxIdx = state.historyFens.length - 1;
   const current = state.historyIndex === -1 ? maxIdx : state.historyIndex;
-  goToHistoryIndex(Math.max(0, current - 1));
+  // Fix #17: Return early when already at the starting position (index 0)
+  if (current <= 0) return;
+  goToHistoryIndex(current - 1);
 }
 
 export function stepNextMove() {
@@ -840,6 +861,7 @@ function stopClockTicker() {
 function handleGameOver(winner, statusReason) {
   if (state.gameOver) return;
   state.gameOver = true;
+  state.gameResult = winner; // Fix #19: persist for PGN export
   state.isMyTurn = false;
   stopClockTicker();
 
@@ -916,17 +938,24 @@ function handleGameOver(winner, statusReason) {
 //  RESIGN & DRAW
 // ─────────────────────────────────────────────
 
+// Fix #4: prevent double-resign if the button is clicked twice before the
+// async Firebase call resolves.
+let isResigning = false;
+
 export async function resign() {
-  if (state.gameOver) return;
+  if (state.gameOver || isResigning) return;
 
   if (state.isAiMode) {
+    isResigning = true;
     const winner = state.myColor === "white" ? "b" : "w";
     handleGameOver(winner, "resigned");
     showToast("You resigned the game.", "default");
+    isResigning = false;
     return;
   }
 
   if (!state.roomCode) return;
+  isResigning = true;
   try {
     await resignGame(state.roomCode, state.myColor);
     const winner = state.myColor === "white" ? "b" : "w";
@@ -935,6 +964,8 @@ export async function resign() {
   } catch (err) {
     console.error("[Game] Resign failed:", err);
     showToast("Could not resign. Please check connection.", "error");
+  } finally {
+    isResigning = false;
   }
 }
 
@@ -1014,12 +1045,20 @@ export function getPGN() {
   const blackName = state.players.black?.name || "Black";
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, ".");
 
+  // Fix #19: Derive the correct PGN Result tag from actual game outcome
+  let resultTag = "*";
+  if (state.gameOver && state.gameResult) {
+    if (state.gameResult === "draw") resultTag = "1/2-1/2";
+    else if (state.gameResult === "w") resultTag = "1-0";
+    else if (state.gameResult === "b") resultTag = "0-1";
+  }
+
   let pgn = `[Event "LabChess Game"]\n`;
   pgn += `[Site "LabChess"]\n`;
   pgn += `[Date "${date}"]\n`;
   pgn += `[White "${whiteName}"]\n`;
   pgn += `[Black "${blackName}"]\n`;
-  pgn += `[Result "*"]\n\n`;
+  pgn += `[Result "${resultTag}"]\n\n`;
 
   for (let i = 0; i < state.moveHistory.length; i += 2) {
     const moveNum = Math.floor(i / 2) + 1;

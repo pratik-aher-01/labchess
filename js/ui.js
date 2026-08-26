@@ -70,6 +70,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     updateConnectionBadge(e.detail?.connected ?? true);
   });
 
+  // Fix #20: Show a one-time toast when Stockfish is unavailable and the
+  // weaker fallback minimax engine is used instead.
+  let aiFallbackToastShown = false;
+  window.addEventListener("labchess:ai-fallback", () => {
+    if (!aiFallbackToastShown) {
+      aiFallbackToastShown = true;
+      showToast("⚠️ Stockfish unavailable — using built-in engine (reduced strength).", "default", 5000);
+    }
+  });
+
   // Check for active session to resume (page refresh recovery)
   try {
     const existing = await checkExistingSession();

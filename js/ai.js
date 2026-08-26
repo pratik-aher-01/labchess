@@ -404,6 +404,12 @@ export async function getAiMove(chess, level = "medium") {
     }
   }
 
+  // Fix #20: Notify the UI that we are using the weaker fallback engine
+  // so the user is not surprised by lower AI quality.
+  if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+    window.dispatchEvent(new CustomEvent("labchess:ai-fallback", { detail: { level } }));
+  }
+
   // Fallback minimax engine
   return getFallbackMove(chess, level);
 }

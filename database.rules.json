@@ -19,11 +19,9 @@
             ".validate": "newData.isNumber()"
           },
           "rematchRequestedBy": {
-            // Must be null (clear) or the authenticated user's own UID (can't impersonate)
             ".validate": "newData.val() === null || (newData.isString() && newData.val() === auth.uid)"
           },
           "drawOfferedBy": {
-            // Must be null (decline/clear) or the authenticated user's own UID (can't spoof offers)
             ".validate": "newData.val() === null || (newData.isString() && newData.val() === auth.uid)"
           },
           "timeControl": {
@@ -83,8 +81,9 @@
           }
         },
         "spectators": {
-          ".write": "auth != null",
+          ".write": false,
           "$spectatorUid": {
+            ".write": "auth != null && auth.uid === $spectatorUid",
             ".validate": "auth.uid === $spectatorUid && newData.hasChildren(['name', 'joinedAt'])",
             "name": {
               ".validate": "newData.isString() && newData.val().length <= 32"
@@ -100,7 +99,6 @@
         "chat": {
           ".write": "auth != null",
           "$msgId": {
-            // Rate-limit: timestamp must be within 5 seconds of server time
             ".validate": "newData.hasChildren(['sender', 'text', 'timestamp']) && newData.child('timestamp').val() >= (now - 5000) && newData.child('timestamp').val() <= (now + 5000)",
             "senderUid": {
               ".validate": "newData.isString() && newData.val() === auth.uid"
@@ -122,7 +120,6 @@
         "reactions": {
           ".write": "auth != null",
           "$rxId": {
-            // Rate-limit: timestamp must be within 5 seconds of server time
             ".validate": "newData.hasChildren(['emoji', 'timestamp']) && newData.child('timestamp').val() >= (now - 5000) && newData.child('timestamp').val() <= (now + 5000)",
             "senderUid": {
               ".validate": "newData.isString() && newData.val() === auth.uid"

@@ -49,8 +49,9 @@ export function getCurrentOrientation() {
 //  INIT BOARD
 // ─────────────────────────────────────────────
 
-// Tracks whether click/tap listeners have been added to the board DOM element
+// Tracks whether one-time window listeners have been added
 let clickListenersAttached = false;
+let resizeListenerAttached = false;
 
 export function initBoard(fen = "start") {
   // Always reset transient state on game start (fixes stale state across rematches)
@@ -81,11 +82,16 @@ export function initBoard(fen = "start") {
     clickListenersAttached = true;
   }
 
-  window.addEventListener("resize", () => {
-    if (boardInstance) {
-      boardInstance.resize();
-    }
-  });
+  // Fix #16: Guard with a flag so the resize listener only registers once
+  // across rematches, AI games, and session restores.
+  if (!resizeListenerAttached) {
+    window.addEventListener("resize", () => {
+      if (boardInstance) {
+        boardInstance.resize();
+      }
+    });
+    resizeListenerAttached = true;
+  }
 
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
@@ -262,12 +268,14 @@ function onDrop(source, target) {
     return "snapback";
   }
 
-  // Dropped on another square: execute move
+  // Fix #6: Return "snapback" on promotion so the pawn doesn't visually
+  // jump to rank 8 before the user has chosen a promotion piece.
+  // The modal's confirm callback will call tryMove() and re-render the board.
   if (needsPromotion(source, target)) {
     pendingPromotionMove = { from: source, to: target };
     clearSelection();
     showPromotionModal(source);
-    return;
+    return "snapback";
   }
 
   const success = tryMove(source, target);
@@ -436,8 +444,10 @@ export function cancelPromotion() {
 }
 
 function removePromotionModal() {
+  // Fix #15: The modal is a child of the backdrop — removing the backdrop
+  // is sufficient. Querying for the inner modal ID separately is redundant
+  // and could cause double-remove if they were ever reparented.
   document.getElementById("promotion-backdrop")?.remove();
-  document.getElementById("promotion-modal")?.remove();
 }
 
 // ─────────────────────────────────────────────

@@ -18,8 +18,6 @@
   <img src="assets/gameplay.png" alt="LabChess Live Gameplay — Real-Time Multiplayer Board, Clocks & Notation" width="100%" style="border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,0.5);" />
 </p>
 
----
-
 ## 🏛️ System Architecture
 
 ```mermaid
@@ -234,6 +232,21 @@ python -m http.server 8080
 npx serve .
 ```
 Open **`http://localhost:8080`** in your browser. Open a second incognito window or share your local IP (`http://192.168.x.x:8080`) to play across devices!
+
+---
+
+## 🌐 Production Deployment
+
+### Option A — Firebase Hosting (Recommended)
+```bash
+firebase deploy --only hosting,database
+```
+
+### Option B — Vercel
+1. Push your repository to GitHub.
+2. Import project in [Vercel](https://vercel.com).
+3. Framework Preset: **Other** (Static HTML).
+4. Click **Deploy**.
 
 ---
 
