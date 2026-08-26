@@ -30,37 +30,17 @@
   <link rel="stylesheet" href="css/responsive.css?v=3.1" />
 
   <!--
-    ─── FIREBASE CONFIG (inline — keep config.js gitignored) ───
-    This is intentionally inlined here so config.js never needs
-    to be committed to git. Firebase Web API keys are designed to
-    be public — real security is enforced by database.rules.json.
+    ─── FIREBASE CONFIG LOADER ───
+    Configuration is loaded dynamically from config.js (protected by .gitignore).
+    For initial setup, copy config.example.js to config.js and add your project keys.
   -->
-  <script>
-    window._labchessConfig = {
-      firebase: {
-        apiKey:            "AIzaSyDcTgQuIoQGYefrjrLmx1URi381OfTmev4",
-        authDomain:        "labchess-4f5cb.firebaseapp.com",
-        databaseURL:       "https://labchess-4f5cb-default-rtdb.firebaseio.com",
-        projectId:         "labchess-4f5cb",
-        storageBucket:     "labchess-4f5cb.firebasestorage.app",
-        messagingSenderId: "765553562871",
-        appId:             "1:765553562871:web:f4797f92a8373cf9216ff2"
-      },
-      appCheck: {
-        enabled: false,
-        siteKey: "",
-        isTokenAutoRefreshEnabled: true
-      },
-      functions: {
-        enabled: false,
-        region: "us-central1"
-      },
-      limits: {
-        roomCodeLength: 6,
-        roomTtlMinutes: 120,
-        maxPlayerNameLength: 20
-      }
-    };
+  <script type="module">
+    try {
+      const mod = await import('./config.js');
+      window._labchessConfig = mod.default || mod.config || mod;
+    } catch (e) {
+      console.info("[Config] Local config.js not found. Copy config.example.js to config.js.");
+    }
   </script>
 </head>
 

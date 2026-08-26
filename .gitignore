@@ -1,33 +1,65 @@
 # ─────────────────────────────────────────────
-#  LabChess — .gitignore
+#  LabChess — .gitignore (Production & Security Hardened)
 # ─────────────────────────────────────────────
 
-# OS files
+# OS metadata & temporary files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 desktop.ini
 
-# Editor & IDE folders
+# Editor & IDE configurations
 .vscode/
 .idea/
+*.sublime-project
+*.sublime-workspace
 *.suo
 *.user
+*.userosscache
+*.sln.docstates
+*.swp
+*.swo
+*~
 
-# Firebase
+# Dependencies & Package Managers
+node_modules/
+functions/node_modules/
+.pnp
+.pnp.js
+
+# Build artifacts & caches
+.vercel/
 .firebase/
+functions/.runtimecache/
+
+# Debug & Log files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 firebase-debug.log*
 firestore-debug.log*
 ui-debug.log*
 
-# Node / Dependencies
-node_modules/
-
-# Service Account Keys & Secrets
-*serviceAccountKey*.json
+# Environment & Secret files
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+*.env
+*.pem
+*.key
+*.cert
+*.pfx
+*.p12
+*serviceAccount*.json
+*credentials*.json
+private-key*.json
 
-# Firebase config with live credentials — inlined in index.html instead
-# See config.example.js for the template
+# Firebase local config with active credentials
+# (See config.example.js for the safe template)
 config.js

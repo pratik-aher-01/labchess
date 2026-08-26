@@ -26,9 +26,10 @@ import {
   limitToLast,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-// Config is injected as window._labchessConfig by the inline <script> in index.html
-// This keeps config.js out of git while still making the credentials available.
-const config = window._labchessConfig || {};
+// Config is provided at runtime via window._labchessConfig by config.js (ignored by Git)
+export function getActiveConfig() {
+  return window._labchessConfig || {};
+}
 
 // ── Firebase Core Singletons ──
 let app = null;
@@ -53,8 +54,12 @@ export function initFirebase() {
 
   initPromise = (async () => {
     try {
+      const cfg = await getActiveConfig();
       if (!app) {
-        app = initializeApp(config.firebase);
+        if (!cfg.firebase || !cfg.firebase.apiKey) {
+          throw new Error("Firebase credentials missing. Please create config.js using config.example.js.");
+        }
+        app = initializeApp(cfg.firebase);
         auth = getAuth(app);
         db = getDatabase(app);
 
@@ -62,14 +67,14 @@ export function initFirebase() {
         window._labchess_auth = auth;
 
         // Initialize App Check if enabled
-        if (config.appCheck && config.appCheck.enabled && config.appCheck.siteKey) {
+        if (cfg.appCheck && cfg.appCheck.enabled && cfg.appCheck.siteKey) {
           try {
             const { initializeAppCheck, ReCaptchaV3Provider } = await import(
               "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js"
             );
             initializeAppCheck(app, {
-              provider: new ReCaptchaV3Provider(config.appCheck.siteKey),
-              isTokenAutoRefreshEnabled: config.appCheck.isTokenAutoRefreshEnabled ?? true,
+              provider: new ReCaptchaV3Provider(cfg.appCheck.siteKey),
+              isTokenAutoRefreshEnabled: cfg.appCheck.isTokenAutoRefreshEnabled ?? true,
             });
             console.log("[AppCheck] Initialized successfully");
           } catch (err) {
@@ -78,12 +83,12 @@ export function initFirebase() {
         }
 
         // Initialize Cloud Functions if enabled
-        if (config.functions && config.functions.enabled) {
+        if (cfg.functions && cfg.functions.enabled) {
           try {
             const { getFunctions } = await import(
               "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js"
             );
-            functionsInstance = getFunctions(app, config.functions.region || "us-central1");
+            functionsInstance = getFunctions(app, cfg.functions.region || "us-central1");
             console.log("[Functions] Initialized successfully");
           } catch (err) {
             console.warn("[Functions] Failed to initialize:", err);
@@ -209,8 +214,9 @@ function updatePresence(online) {
 // ─────────────────────────────────────────────
 
 export function generateRoomCode() {
+  const cfg = getActiveConfig();
   let code = "";
-  for (let i = 0; i < (config.limits?.roomCodeLength || 6); i++) {
+  for (let i = 0; i < (cfg.limits?.roomCodeLength || 6); i++) {
     code += ROOM_CODE_CHARS[Math.floor(Math.random() * ROOM_CODE_CHARS.length)];
   }
   return code;
@@ -228,6 +234,7 @@ export async function createRoom(chosenColor = "white", playerName = "Host", tim
 
   const hostColor = chosenColor === "black" ? "black" : "white";
   const timeMs = timeSeconds > 0 ? timeSeconds * 1000 : 0;
+  const cfg = getActiveConfig();
 
   // Fix #13: Use runTransaction to atomically claim a unique room code,
   // eliminating the TOCTOU race that existed with the old get+set pattern.
@@ -248,7 +255,7 @@ export async function createRoom(chosenColor = "white", playerName = "Host", tim
       }
 
       const now = Date.now();
-      const expiresAt = now + (config.limits?.roomTtlMinutes || 120) * 60 * 1000;
+      const expiresAt = now + (cfg.limits?.roomTtlMinutes || 120) * 60 * 1000;
 
       return {
         metadata: {
@@ -404,7 +411,8 @@ export async function submitMove(
   if (!uid) throw new Error("Unauthenticated");
 
   // Server-authoritative move submission via Cloud Functions when enabled
-  if (config.functions && config.functions.enabled && functionsInstance) {
+  const cfg = getActiveConfig();
+  if (cfg.functions && cfg.functions.enabled && functionsInstance) {
     try {
       const { httpsCallable } = await import(
         "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js"
@@ -477,8 +485,9 @@ export async function offerDraw(roomCode) {
 export async function respondToDraw(roomCode, accept) {
   const code = (roomCode || currentRoomCode).toUpperCase();
   if (myPlayerColor !== "white" && myPlayerColor !== "black") return;
+  const cfg = getActiveConfig();
 
-  if (config.functions && config.functions.enabled && functionsInstance) {
+  if (cfg.functions && cfg.functions.enabled && functionsInstance) {
     try {
       const { httpsCallable } = await import(
         "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js"
@@ -512,8 +521,9 @@ export async function respondToDraw(roomCode, accept) {
 export async function claimTimeout(roomCode, winnerColor) {
   const code = (roomCode || currentRoomCode).toUpperCase();
   if (myPlayerColor !== "white" && myPlayerColor !== "black") return;
+  const cfg = getActiveConfig();
 
-  if (config.functions && config.functions.enabled && functionsInstance) {
+  if (cfg.functions && cfg.functions.enabled && functionsInstance) {
     try {
       const { httpsCallable } = await import(
         "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js"
