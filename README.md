@@ -234,20 +234,6 @@ npx serve .
 Open **`http://localhost:8080`** in your browser. Open a second incognito window or share your local IP (`http://192.168.x.x:8080`) to play across devices!
 
 ---
-
-## 🌐 Production Deployment
-
-### Option A — Firebase Hosting (Recommended)
-```bash
-firebase deploy --only hosting,database
-```
-
-### Option B — Vercel
-1. Push your repository to GitHub.
-2. Import project in [Vercel](https://vercel.com).
-3. Framework Preset: **Other** (Static HTML).
-4. Click **Deploy**.
-
 ---
 
 ## 📜 License
